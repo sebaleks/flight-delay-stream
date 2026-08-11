@@ -228,7 +228,30 @@ def main() -> None:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(render(report))
     print(render(report))
+    print(summary(report))
     print(f"wrote {args.out}")
+
+
+def summary(report: dict) -> str:
+    """One screen: the headline next to where every other event went."""
+    h, c = report["headline"], report["join"]["counters"]
+    lines = [
+        "STREAMING EVALUATION",
+        f"  headline  p >= {h['threshold']}: precision {h['precision']}  "
+        f"recall {h['recall']}  ({h['alerts']} alerts, {report['n_scored']} scored, "
+        f"base rate {report['base_rate']})",
+        f"  beneath   pr_auc {report['pr_auc']}  ece {report['ece']}  " + "  ".join(
+            f"p>={t}: P {m['precision']} R {m['recall']}"
+            for t, m in sorted(report["sensitivity"].items())
+        ),
+        "  where every event went (nothing silently dropped):",
+    ]
+    lines += [f"    {k:<42} {v:>8,}" for k, v in sorted(c.items())]
+    lines.append(
+        f"    {'risk / outcome events consumed':<42} "
+        f"{report['join']['risk_events']:>8,} / {report['join']['outcome_events']:,}"
+    )
+    return "\n".join(lines)
 
 
 if __name__ == "__main__":
