@@ -61,6 +61,14 @@ serve = [
     "holidays>=0.57",  # same library the training holiday calendar was generated with
 ]
 
+# Streaming stack (MSDS 682): Kafka clients + Avro serde against the local
+# Schema Registry. See CLAUDE.md section 2.
+kafka = [
+    "confluent-kafka[avro,schemaregistry]>=2.6",
+    "fastavro>=1.9",
+    "requests>=2.32",
+]
+
 ml = [
     "scikit-learn>=1.5",
     "xgboost>=3.0",  # >=3 required: UBJ artifacts persist categorical level mappings
@@ -92,7 +100,7 @@ build-backend = "hatchling.build"
 
 # The three importable Python packages in this monorepo.
 [tool.hatch.build.targets.wheel]
-packages = ["ingestion", "ml", "orchestration", "dashboard"]
+packages = ["ingestion", "ml", "orchestration", "dashboard", "streaming"]
 
 # Dagster code location entry point (placeholder Definitions live here).
 [tool.dagster]
@@ -107,5 +115,5 @@ target-version = "py311"
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
-testpaths = ["ingestion", "ml", "orchestration", "dashboard"]
+testpaths = ["ingestion", "ml", "orchestration", "dashboard", "streaming"]
 python_files = ["test_*.py", "*_test.py"]
