@@ -85,7 +85,10 @@ PREFLIGHT (stop and report if any item is missing)
 - data/replay/departures_week.parquet exists.
 - ml/artifacts/ contains one run directory with xgb_classifier.ubj and
   calibrator.joblib.
-- data/golden/golden_vectors.parquet exists.
+- data/golden/features_week_sample.parquet exists (5,000 full 51-feature mart
+  rows for the replay week; the enrichment golden reference).
+- data/golden/parity_before_migration.json exists (184 request-level parity
+  predictions captured through the live BigQuery serving path).
 - docker compose up -d gives healthy Kafka + Schema Registry (H1 done).
 
 WHAT THE PIECES ARE
@@ -130,8 +133,8 @@ Build streaming/consumer.py:
 GATE
 With the producer running (or a hand-produced test event), a calibrated
 scored event appears on flight.delay_risk.v1, and a golden-vector spot check
-passes: for 20 rows of data/golden/golden_vectors.parquet, the hist_* values
-your enrichment produces match the golden values exactly.
+passes: for 20 rows of data/golden/features_week_sample.parquet, the hist_*
+values your enrichment produces match the golden values exactly.
 
 VERIFY
 - A consumer group offset advances on flight.departures.v1.
@@ -407,7 +410,7 @@ open issues. If no-go: the one-line future-work note and where you stopped.
 | Prompt | Blocks on |
 |---|---|
 | H1 | nothing (can start immediately) |
-| H2 | `streaming/constants.py` pushed; `data/lookups/*`, `data/replay/departures_week.parquet`, `data/weather/isd_week.parquet`, `data/golden/golden_vectors.parquet`, `ml/artifacts/<run>/` present |
+| H2 | `streaming/constants.py` pushed; `data/lookups/*`, `data/replay/departures_week.parquet`, `data/weather/isd_week.parquet`, `data/golden/features_week_sample.parquet`, `data/golden/parity_before_migration.json`, `ml/artifacts/<run>/` present |
 | H3 | H2 gate; `data/golden/rotation_reference_week.parquet` present |
 | H4 | H3 gate; `docs/schemas.md` present |
 | H5 | Day 2 sync decision; `data/weather/taf_week.csv` present; observed-weather baseline scored |
