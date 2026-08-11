@@ -19,22 +19,20 @@ scored events to late-arriving outcomes. Today you are setting up the local
 stack.
 
 TASK
-Create docker-compose.yml at the repo root with two services:
-1. confluentinc/cp-kafka:8.3.1, single broker in KRaft mode (KRaft is Kafka's
-   built-in metadata mode; no ZooKeeper exists in 8.x). Combined broker and
-   controller roles, a fixed CLUSTER_ID, port 9092 exposed, and a healthcheck.
-2. confluentinc/cp-schema-registry:8.3.1, depending on the broker being
-   healthy, port 8081 exposed, and a healthcheck.
-Both images publish arm64 and run natively on Apple Silicon.
+The stack already exists and is gate-tested on Seb's machine: docker-compose.yml
+at the repo root (cp-kafka 8.3.1 in KRaft mode + cp-schema-registry 8.3.1,
+both healthchecked, arm64-native), the `kafka` extra in pyproject.toml, and
+streaming/admin.py which creates the three topics and registers the contracts.
+Your job is to verify all of it on YOUR machine and add the smoke script:
 
-Then add a `kafka` optional-dependency extra to pyproject.toml containing
-confluent-kafka (with Avro support), fastavro, and requests. Run `uv sync
---extra kafka --extra ml`. Do not remove existing extras.
-
-Write a smoke test script (scripts/smoke_kafka.py or similar) that creates a
-throwaway topic, produces one message, consumes it back, registers a trivial
-Avro schema in the Schema Registry, fetches it back, and prints PASS for each
-step.
+1. `uv sync --extra kafka --extra ml --extra serve --extra ingestion`
+2. `docker compose up -d --wait`; both services reach healthy.
+3. `make demo` once: it recreates topics, registers contracts, and replays
+   the committed week (the consumer note it prints is expected).
+4. Write scripts/smoke_kafka.py: create a THROWAWAY topic, produce one
+   message, consume it back, register a trivial Avro schema under a
+   throwaway subject, fetch it back, print PASS per step. Do not touch the
+   three real topics or their subjects.
 
 GATE
 `docker compose up -d` reaches healthy on both services, and the smoke test
@@ -69,11 +67,13 @@ any deviation from this prompt with one line of reasoning.
 ## H2: Consumer enrichment and scoring (Day 1, 11:00)
 
 ```
-You are working in the repo at ~/flight-delay-stream (branch main). Context: a
-replay producer (built by the other teammate) streams one week of flight
-departure events into the Kafka topic flight.departures.v1, Avro-encoded
-against the local Schema Registry (localhost:8081). Your job is the scoring
-consumer. A frozen, Platt-calibrated XGBoost classifier predicts P(arrival
+You are working in the repo at ~/flight-delay-stream (branch main). Context:
+the replay producer is LIVE and gate-passed (151,878 events, byte-identical
+same-seed runs), and the outcomes producer and the outcome-join evaluator
+already exist too. `make demo` populates flight.departures.v1 and
+flight.outcomes.v1, Avro-encoded against the local Schema Registry
+(localhost:8081). Consume REAL events from the start; there is no need to
+hand-produce test events. Your job is the scoring consumer. A frozen, Platt-calibrated XGBoost classifier predicts P(arrival
 delay >= 15 min) from 51 features that are all knowable before departure
 (Platt calibration is a monotonic remap that turns raw scores into honest
 frequencies).
@@ -84,7 +84,9 @@ PREFLIGHT (stop and report if any item is missing)
   typical_rotation.parquet, airports.parquet exist.
 - data/replay/departures_week.parquet exists.
 - ml/artifacts/ contains one run directory with xgb_classifier.ubj and
-  calibrator.joblib.
+  calibrator.joblib. If absent (fresh clone; the run is git-ignored), run
+  `bash scripts/fetch_artifacts.sh` to pull it from the GitHub release; if
+  the release is not published yet, stop and ask Seb.
 - data/golden/features_week_sample.parquet exists (5,000 full 51-feature mart
   rows for the replay week; the enrichment golden reference).
 - data/golden/parity_before_migration.json exists (184 request-level parity
@@ -129,12 +131,17 @@ Build streaming/consumer.py:
    produce an Avro event to flight.delay_risk.v1 following docs/schemas.md
    (fields include delay_probability, risk_band, rotation_state_basis,
    weather_basis, model artifact run id).
+5. CLI contract for `make demo`: `python -m streaming.consumer` must consume
+   flight.departures.v1 to EOF, score, produce, and EXIT (batch mode), so the
+   demo target completes. Add a --follow flag for continuous mode if useful.
 
 GATE
-With the producer running (or a hand-produced test event), a calibrated
-scored event appears on flight.delay_risk.v1, and a golden-vector spot check
-passes: for 20 rows of data/golden/features_week_sample.parquet, the hist_*
-values your enrichment produces match the golden values exactly.
+Against the real replayed week, calibrated scored events appear on
+flight.delay_risk.v1, and a golden-vector spot check passes: for 20 rows of
+data/golden/features_week_sample.parquet, the hist_* values your enrichment
+produces match the golden values exactly. `make eval` afterward shows the
+join counters moving from orphan_outcome into scored (the evaluator already
+exists and owns that report).
 
 VERIFY
 - A consumer group offset advances on flight.departures.v1.
@@ -232,8 +239,12 @@ TASK
    your emitted rotation features against
    data/golden/rotation_reference_week.parquet on the flight key
    (flight_date, carrier, flight_number, origin, dest, crs_dep_time).
-   Report class shares (training reference: 91.95% consistent, 3.93% clean
-   first, 4.12% swap-shaped) and the mismatch count per column.
+   Report class shares and the mismatch count per column. Interpret shares
+   against the WEEK, not the 3-year training reference (91.95% consistent,
+   3.93% clean first, 4.12% swap-shaped): within this week the unknown-tail
+   trigger contributes only 104 rows (0.068%), all cancellations, so the
+   week's class-c share will sit below 4.12%. Split class c by trigger in
+   the report so the cancelled-null-tail subset stays visible.
 
 GATE
 Zero mismatches, or every mismatch class counted and explained in one line
@@ -272,7 +283,10 @@ You are working in the repo at ~/flight-delay-stream (branch main). Context:
 streaming/consumer.py scores flight departure events (H2) with real in-stream
 rotation state (H3) and produces to flight.delay_risk.v1. Two things remain
 on your side: the alert artifact and the tests that make the leakage
-enforcement demonstrable rather than claimed.
+enforcement demonstrable rather than claimed. NOTE: the outcome-join
+evaluator already exists (streaming/evaluator.py, Seb's) and owns the join
+counters, precision/recall, PR-AUC, and ECE — do NOT build a parallel join
+or evaluator; `make eval` runs it.
 
 PREFLIGHT (stop and report if any item is missing)
 - H2 and H3 gates green per their reports.
@@ -411,8 +425,8 @@ open issues. If no-go: the one-line future-work note and where you stopped.
 
 | Prompt | Blocks on |
 |---|---|
-| H1 | nothing (can start immediately) |
-| H2 | `streaming/constants.py` pushed; `data/lookups/*`, `data/replay/departures_week.parquet`, `data/weather/isd_week.parquet`, `data/golden/features_week_sample.parquet`, `data/golden/parity_before_migration.json`, `ml/artifacts/<run>/` present |
+| H1 | nothing (stack, extras, and admin already exist; verify on your machine) |
+| H2 | H1 gate; everything else is on main (`data/lookups/*`, `data/replay/departures_week.parquet`, `data/weather/isd_week.parquet`, `data/golden/features_week_sample.parquet`, `data/golden/parity_before_migration.json`); `ml/artifacts/<run>/` via `scripts/fetch_artifacts.sh` (release pending Seb) |
 | H3 | H2 gate; `data/golden/rotation_reference_week.parquet` present |
 | H4 | H3 gate; `docs/schemas.md` present |
 | H5 | Day 2 sync decision; `data/weather/taf_week.csv` present; observed-weather baseline scored |
