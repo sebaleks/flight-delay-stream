@@ -1,0 +1,21 @@
+{
+  "type": "record",
+  "name": "Departure",
+  "namespace": "flightdelay.v1",
+  "doc": "One scheduled departure, emitted at scheduled-departure order. Every field is knowable_at=schedule (docs/schemas.md); the contract test asserts no post_departure field can appear here.",
+  "fields": [
+    {"name": "flight_date", "type": {"type": "int", "logicalType": "date"}, "knowable_at": "schedule", "doc": "BTS service date"},
+    {"name": "carrier", "type": "string", "knowable_at": "schedule", "doc": "reporting carrier code"},
+    {"name": "flight_number", "type": "string", "knowable_at": "schedule"},
+    {"name": "origin", "type": "string", "knowable_at": "schedule", "doc": "IATA"},
+    {"name": "dest", "type": "string", "knowable_at": "schedule", "doc": "IATA"},
+    {"name": "crs_dep_time", "type": "string", "knowable_at": "schedule", "doc": "scheduled local HHMM; part of the unique grain"},
+    {"name": "crs_dep_ts_utc", "type": {"type": "long", "logicalType": "timestamp-millis"}, "knowable_at": "schedule", "doc": "scheduled departure in UTC, derived from the seed timezone at export/produce time"},
+    {"name": "crs_arr_time", "type": ["null", "string"], "default": null, "knowable_at": "schedule", "doc": "scheduled local arrival HHMM"},
+    {"name": "crs_elapsed_min", "type": ["null", "double"], "default": null, "knowable_at": "schedule"},
+    {"name": "distance_mi", "type": ["null", "double"], "default": null, "knowable_at": "schedule"},
+    {"name": "tail_number", "type": ["null", "string"], "default": null, "knowable_at": "schedule", "doc": "null means the event rides the NOTAIL sentinel key and takes class-c rotation semantics (measured in the replay week: 104 rows, all cancellations)"},
+    {"name": "mode", "type": {"type": "enum", "name": "Mode", "symbols": ["replay", "live"]}, "knowable_at": "schedule"},
+    {"name": "is_warmup", "type": "boolean", "default": false, "knowable_at": "schedule", "doc": "producer-marked warm-up day; scored but excluded from evaluation"}
+  ]
+}

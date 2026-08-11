@@ -213,8 +213,10 @@ tail, maintain the running day state and classify every leg's linkage:
   rotation feature NULL including the band key. rotation_state_basis =
   "swap_null".
 Additional policies: null-tail events arrive on a sentinel key and are
-always swap-shaped (matches training: unknown tail is class c). A carrier
-change on the same tail resets the state. Events inside the producer's
+always swap-shaped (matches training: unknown tail is class c; measured in
+the replay week: 104 rows, all cancellations). A carrier change on the same
+tail resets the state; this is settled on measured grounds (0 multi-carrier
+tails in the week), so do not add a composite key. Events inside the producer's
 warm-up day are scored but flagged rotation_state_basis="warmup" and are
 excluded from evaluation.
 All thresholds come from streaming/constants.py. If a needed constant is

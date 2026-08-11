@@ -61,6 +61,10 @@ mlartifacts/
 *.joblib
 *.model
 
+# ---- Streaming runtime state (checkpoints, alert output) ----
+var/
+alerts.jsonl
+
 # ---- OS / editor ----
 .DS_Store
 .idea/

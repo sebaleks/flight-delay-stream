@@ -1,0 +1,26 @@
+{
+  "type": "record",
+  "name": "DelayRisk",
+  "namespace": "flightdelay.v1",
+  "doc": "One scored departure, defined at T = scheduled departure. scored_at_ts_utc equals T (event time, never wall clock) so replays are deterministic. Output fields are knowable_at=pre_departure_stream (docs/schemas.md).",
+  "fields": [
+    {"name": "flight_date", "type": {"type": "int", "logicalType": "date"}, "knowable_at": "schedule"},
+    {"name": "carrier", "type": "string", "knowable_at": "schedule"},
+    {"name": "flight_number", "type": "string", "knowable_at": "schedule"},
+    {"name": "origin", "type": "string", "knowable_at": "schedule"},
+    {"name": "dest", "type": "string", "knowable_at": "schedule"},
+    {"name": "crs_dep_time", "type": "string", "knowable_at": "schedule"},
+    {"name": "tail_number", "type": ["null", "string"], "default": null, "knowable_at": "schedule"},
+    {"name": "scored_at_ts_utc", "type": {"type": "long", "logicalType": "timestamp-millis"}, "knowable_at": "pre_departure_stream", "doc": "equals scheduled departure T"},
+    {"name": "delay_probability", "type": "double", "knowable_at": "pre_departure_stream", "doc": "Platt-calibrated P(arrival delay >= 15 min)"},
+    {"name": "risk_band", "type": "string", "knowable_at": "pre_departure_stream", "doc": "band edges from streaming/constants.py"},
+    {"name": "alert", "type": "boolean", "knowable_at": "pre_departure_stream", "doc": "delay_probability >= ALERT_THRESHOLD (0.5 primary)"},
+    {"name": "model_run_id", "type": "string", "knowable_at": "pre_departure_stream", "doc": "artifact run under ml/artifacts/"},
+    {"name": "calibration", "type": "string", "default": "platt", "knowable_at": "pre_departure_stream"},
+    {"name": "rotation_state_basis", "type": {"type": "enum", "name": "RotationBasis", "symbols": ["consistent", "clean_first", "swap_null", "warmup"]}, "knowable_at": "pre_departure_stream", "doc": "which linkage class the in-stream state machine assigned"},
+    {"name": "weather_basis", "type": {"type": "enum", "name": "WeatherBasis", "symbols": ["observed", "taf_forecast", "null_path"]}, "knowable_at": "pre_departure_stream"},
+    {"name": "taf_horizon_bin", "type": ["null", "string"], "default": null, "knowable_at": "pre_departure_stream", "doc": "0-3h / 3-12h / 12-30h when weather_basis = taf_forecast"},
+    {"name": "pressure_late_arrivals", "type": ["null", "int"], "default": null, "knowable_at": "pre_departure_stream", "doc": "trailing-window count of late arrivals at origin before T; ops context, NOT an input to the frozen model"},
+    {"name": "pressure_cancellations", "type": ["null", "int"], "default": null, "knowable_at": "pre_departure_stream", "doc": "trailing-window cancellations at origin before T; ops context, NOT an input to the frozen model"}
+  ]
+}

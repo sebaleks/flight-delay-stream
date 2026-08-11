@@ -1,0 +1,20 @@
+{
+  "type": "record",
+  "name": "Outcome",
+  "namespace": "flightdelay.v1",
+  "doc": "Realized truth for one flight, emitted late and out of order by design. Identity fields are knowable_at=schedule; outcome fields are post_departure and exist only for the evaluator, never the scorer (docs/schemas.md).",
+  "fields": [
+    {"name": "flight_date", "type": {"type": "int", "logicalType": "date"}, "knowable_at": "schedule"},
+    {"name": "carrier", "type": "string", "knowable_at": "schedule"},
+    {"name": "flight_number", "type": "string", "knowable_at": "schedule"},
+    {"name": "origin", "type": "string", "knowable_at": "schedule"},
+    {"name": "dest", "type": "string", "knowable_at": "schedule"},
+    {"name": "crs_dep_time", "type": "string", "knowable_at": "schedule"},
+    {"name": "tail_number", "type": ["null", "string"], "default": null, "knowable_at": "schedule"},
+    {"name": "arr_del15", "type": ["null", "boolean"], "default": null, "knowable_at": "post_departure", "doc": "label; null when cancelled or diverted without arrival data"},
+    {"name": "arr_delay_minutes", "type": ["null", "double"], "default": null, "knowable_at": "post_departure"},
+    {"name": "cancelled", "type": "boolean", "knowable_at": "post_departure"},
+    {"name": "diverted", "type": "boolean", "knowable_at": "post_departure"},
+    {"name": "truth_ts_utc", "type": {"type": "long", "logicalType": "timestamp-millis"}, "knowable_at": "post_departure", "doc": "when the outcome became known: actual arrival, or scheduled arrival for cancellations (approximation, disclosed); drives replay emission order and join lateness"}
+  ]
+}
