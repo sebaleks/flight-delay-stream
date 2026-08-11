@@ -2,7 +2,7 @@
 
 This is the working plan for turning the copied 681 batch lakehouse into a realtime streaming inference project on a two-day build clock. It contains the corrections to the planning brief with evidence, the decisions and their arguments, the two-day schedule with a solo-start variant, the deletion and grep audits, the reconciliation with Aidan's draft, risks, costs, and non-goals.
 
-Companion documents: `docs/HANDOFF_PROMPTS.md` (self-contained prompts for Aidan's fresh Claude Code sessions), `docs/PROPOSAL_DRAFT.md` (submitted and frozen; never edited again), `docs/schemas.md` (event contracts), `docs/data_sources.md` (verified external sources), `docs/CLAUDE_MD_PROPOSED.md` (draft replacement rulebook). The original brief's "open questions" deliverable is superseded: a two-day path cannot leave decisions open, so they are resolved below as kickoff decisions with rationale, to be confirmed or adjusted at the first sync.
+Companion documents: `docs/HANDOFF_PROMPTS.md` (self-contained prompts for Aidan's fresh Claude Code sessions), `docs/PROPOSAL_DRAFT.md` (submitted and frozen; never edited again), `docs/schemas.md` (event contracts), `docs/data_sources.md` (verified external sources), and the live `CLAUDE.md` (the streaming rulebook, promoted 2026-08-11; the 681 rulebook is archived at `docs_legacy/CLAUDE_MD_LEGACY.md`). The original brief's "open questions" deliverable is superseded: a two-day path cannot leave decisions open, so they are resolved below as kickoff decisions with rationale, to be confirmed or adjusted at the first sync.
 
 ## The organizing judgment
 
@@ -29,9 +29,9 @@ The brief asked for verification of every claim. These items came back different
 10. The brief's Phase 5 rule (absent inbound leg means NULL cascade features, reusing swap semantics) contradicts the repo's own serving design. Post-restriction commit `ef65330` records that all-NULL rotation MEANS a swap-restructured linkage, a day-of outcome, so the API deliberately serves a typical-rotation estimate flagged `rotation_context: "typical_estimate"` for merely-unknown rotation. Kickoff decision 7 resolves this.
 11. MLflow "served by tag" is not current behavior: no `register_model`, `log_model`, or `models:/` URI exists anywhere in `ml/`. Serving loads the newest complete run under `ml/artifacts/`. The keep-and-adapt verdict stands for what MLflow actually does here (pure-side-effect logging, local SQLite metadata), plus logging per-horizon calibration curves and the drift comparison as tracked evaluation runs. A registry is stretch work, not adaptation.
 12. The model artifact is not in the repo. `ml/artifacts/` is git-ignored and absent from this worktree; artifacts live only in `gs://$GCS_BUCKET/serving/<run>/` and the MLflow GCS store (about 695 MB per run; four-file contract: `xgb_classifier.ubj`, `xgb_regressor.ubj`, `logreg_pipeline.joblib`, `calibrator.joblib`). A one-time export is mandatory before any cloud coupling is deleted.
-13. CLAUDE.md section 9 requires "forecast-available" weather while the implementation joins the last ISD observation at or before scheduled departure (`dbt/models/gold/ml/ml_flight_features.sql:246-265`, 3-hour ceiling). An observation is not a forecast. This is the known deviation the TAF study resolves; the repo itself reconciles it at serve time (`ml/serving.py` header, `ml/README.md` train/serve gap #1).
+13. The 681 rulebook's section 9 (archived at `docs_legacy/CLAUDE_MD_LEGACY.md`, carried into the live CLAUDE.md section 3) requires "forecast-available" weather while the implementation joins the last ISD observation at or before scheduled departure (`dbt/models/gold/ml/ml_flight_features.sql:246-265`, 3-hour ceiling). An observation is not a forecast. This is the known deviation the TAF study resolves; the repo itself reconciles it at serve time (`ml/serving.py` header, `ml/README.md` train/serve gap #1).
 
-Status note: the live `CLAUDE.md` now carries a section 0 status header, the streaming retitle, and a reference note replacing the old binding-decisions paragraph (applied 2026-08-11 at Seb's direction). Sections 1-11 are historical reference; section 0 is binding. The full replacement remains a draft at `docs/CLAUDE_MD_PROPOSED.md` and does not go live until the build matches it.
+Status note: the streaming rulebook is now the live `CLAUDE.md` (promoted 2026-08-11 from the draft at `docs/CLAUDE_MD_PROPOSED.md`, at Seb's direction). The 681 rulebook is archived unchanged at `docs_legacy/CLAUDE_MD_LEGACY.md`, section 0 status header included. The live file marks its repo layout and export-script line as target state pending the deletion audit.
 
 ### Deck-versus-repo discrepancies, all of them
 
@@ -102,7 +102,7 @@ Step 0 above, all in background. Step 1: `streaming/constants.py` plus unit test
 - **10:00 checkpoint.** TAF parsing producing decoded rows?
 - **11:30 Sync 5.** Confirm the science lane order: TAF study first (accepted), drift second if time remains.
 - 11:30-15:30. Aidan: H5, the TAF study; hard go/no-go at 13:00 (no usable feature rows means drop it, one-line future-work note). Seb: drift under the weather-NULL design, abandon at 14:30; then Confluent Cloud deploy and screenshots (org created now so the 30-day credit is fresh), abandon at 15:30.
-- 15:30-17:30. Both: finish docs (this plan's tables kept current, schemas.md, data_sources.md, CLAUDE_MD_PROPOSED.md).
+- 15:30-17:30. Both: finish docs (this plan's tables kept current, schemas.md, data_sources.md; the streaming rulebook is already live).
 - **17:00-17:30.** Shipped-versus-claimed audit: compare what actually shipped against the submitted proposal's claims and write the delta into the deviations section of this plan. The proposal itself is frozen and is not edited.
 - 17:30-19:00. Full dress rehearsal on a clean machine; capture demo output and the evaluation report.
 - 19:00-21:00. Buffer, held not planned.
@@ -119,13 +119,13 @@ Step 0 above, all in background. Step 1: `streaming/constants.py` plus unit test
 | Tier 1 live mode | not scheduled | Cut unless everything is green by Day 2, 15:00 |
 | Streamlit tail UI | cut now | Terminal consumer output |
 
-## Deletion-first audit (recommendations; the only executed changes so far are the docs_legacy move, uncommitted, and the CLAUDE.md section 0 header)
+## Deletion-first audit (recommendations; executed so far: the docs_legacy migration, the rulebook promotion, and the reviewer-facing README/.env.example rewrites, all committed)
 
 Default verdict is delete. Everything kept carries a one-line justification tied to the streaming path. Verdicts: keep / keep-and-adapt / export-then-delete / move-to-docs_legacy / delete.
 
 | Path | Verdict | Rationale | What breaks if deleted |
 |---|---|---|---|
-| `CLAUDE.md` | keep-and-adapt | Section 0 status header applied; full replacement drafted at `docs/CLAUDE_MD_PROPOSED.md` | Agent sessions revert to batch-lakehouse behavior |
+| `CLAUDE.md` | keep-and-adapt (done) | Streaming rulebook promoted live; 681 rulebook archived at `docs_legacy/CLAUDE_MD_LEGACY.md` | Agent sessions revert to batch-lakehouse behavior |
 | `README.md` | keep-and-adapt | Front door must describe the Kafka architecture | Reviewers land on a different project |
 | `pyproject.toml`, `uv.lock` | keep-and-adapt | Add `kafka` extra; drop transform/orchestration/dashboard extras; regenerate lock | The environment |
 | `.env.example` | keep-and-adapt | Zero current vars survive; Kafka and Schema Registry vars replace the all-GCP surface | New-clone setup |
@@ -190,7 +190,7 @@ Link-level danglers: `README.md:44` and `ml/README.md:9` point at `docs/lakehous
 
 | Path | Line(s) | Match | Action |
 |---|---|---|---|
-| `CLAUDE.md` | 1, 11 | "Flight-Delay Lakehouse", "A GCP lakehouse…" | rewrite (section 0 applied; full replacement drafted) |
+| `CLAUDE.md` | 1, 11 | "Flight-Delay Lakehouse", "A GCP lakehouse…" | rewrite (done: streaming rulebook promoted live; legacy archived) |
 | `README.md` | 1-67 | lakehouse identity throughout | rewrite |
 | `pyproject.toml` | 2, 4 | `name = "flight-delay-lakehouse"` | rewrite |
 | `dashboard/app.py`, `views/overview.py`, `README.md` | 15, 89; 3, 17; 1 | page titles | delete-with-file |

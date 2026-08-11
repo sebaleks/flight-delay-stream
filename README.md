@@ -5,7 +5,7 @@
 > one make target. Start with [docs/PLAN.md](docs/PLAN.md),
 > [docs/schemas.md](docs/schemas.md), and
 > [docs/HANDOFF_PROMPTS.md](docs/HANDOFF_PROMPTS.md); binding decisions are in
-> [CLAUDE.md](CLAUDE.md) section 0. **Everything below this block describes the
+> [CLAUDE.md](CLAUDE.md), the live streaming rulebook. **Everything below this block describes the
 > MSDS 681 batch platform this project was built on, kept as reference.** Its
 > GCP setup instructions do not apply to reviewers.
 

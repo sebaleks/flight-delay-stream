@@ -1,176 +1,83 @@
 # CLAUDE.md — Flight-Delay Streaming (MSDS 682)
 
-## 0. STATUS — this repo is the MSDS 682 streaming project
+The binding rulebook for this repo. The 681 batch rulebook it replaces is archived unchanged at `docs_legacy/CLAUDE_MD_LEGACY.md`.
 
-Sections 1-11 below describe the MSDS 681 batch lakehouse this repo was
-copied from. They are RETAINED AS REFERENCE, not as binding decisions.
-Do not apply them to new work.
-
-Binding for current work: Kafka + Avro/Schema Registry, local Docker
-Compose primary, tail-keyed topics, `streaming/` package, no dbt/Dagster/
-BigQuery in the runtime path. The leakage rule in section 9, including the
-linkage clause, and the MLflow adoption rule REMAIN BINDING.
-Full replacement drafted later at docs/CLAUDE_MD_PROPOSED.md.
-
----
-
-Sections 1-11 record the MSDS 681 lakehouse architecture and are
-historical reference. Section 0 above is binding.
+Two blocks below are carried verbatim from the 681 rulebook's section 9: the leakage rule including the linkage clause, and the MLflow adoption rule. They are quoted exactly, dangling references included; the adaptation notes that follow each block fix the navigation without editing the quoted text.
 
 ---
 
 ## 1. Purpose
 
-A GCP lakehouse that turns US domestic on-time performance data into (a) an
-analytics star schema and (b) an ML feature mart, then trains two models that
-predict flight delays using **only information known before departure**.
+An MSDS 682 realtime streaming inference project. A seeded replay producer streams one held-out week of US domestic flights into Kafka; a consumer scores every departure at scheduled gate time with the frozen 681 delay classifier, maintains per-tail rotation state under the schedule-consistency rule, emits a scored risk topic and an alert artifact, and an evaluator joins late-arriving outcomes to report alert precision and recall. Two findings organize all scope: the leakage boundary enforced in-stream, and the measured cost of forecast-for-observation weather substitution.
 
-## 2. Platform & Auth
+## 2. Binding architectural decisions
 
-- **Cloud:** Google Cloud Platform (GCP).
-- **Auth:** Application Default Credentials (ADC) everywhere — local dev, dbt,
-  Dagster, and ingestion. Locally this means `gcloud auth application-default
-  login`. **Never** commit or reference a service-account JSON key in code.
-  A key file may be injected via `GOOGLE_APPLICATION_CREDENTIALS` in CI only.
-- All GCP identifiers (project id, bucket, datasets, region) come from
-  environment variables, loaded from `.env` (see `.env.example`). No hardcoding.
+- **Local-first.** Docker Compose with `confluentinc/cp-kafka:8.3.1` and `confluentinc/cp-schema-registry:8.3.1` (KRaft; arm64-native) is the primary deliverable and the demo. `docker compose up` plus one make target must produce flowing events, a populated risk topic, an alert file, and an evaluation report, deterministically, on a clean machine, with a README of at most 10 steps. Confluent Cloud is a one-time documented deployment for screenshots, never a dependency.
+- **Contracts are Avro at the Schema Registry, BACKWARD compatibility, and they are the ONLY contract definitions.** No application-level schema mirror. Contract shapes and the `knowable_at` discipline are specified in `docs/schemas.md`.
+- **Topics are keyed by tail number** (sentinel `"NOTAIL"` for null tails, routed to a dedicated partition and scored with swap-shaped NULL rotation semantics). Per-tail ordering is what makes in-stream rotation state possible.
+- **Every contract field carries `knowable_at`** in {schedule, pre_departure_stream, post_departure}. No `post_departure` field may reach the scorer; a contract test enforces this against the registry.
+- **The shared constants module (`streaming/constants.py`) is the single source** for every leakage constant: duty window [0, 840] minutes, 35-minute turnaround, band edges 35/60/120, position cap 6, swap-class triggers, 3-hour weather staleness, the `knowable_at` field sets, and the forbidden post-departure columns. Batch tests and consumer assertions both import it. Restating a value from it anywhere is a defect.
+- **The 2024-06-30 model is the shipped artifact and stays fixed.** It is the baseline every measurement compares against. Model changes are governed by the adoption rule quoted in section 4 and by `docs/leakage_discipline.md` rule 7 (the one-time held-out confirmation for CatBoost is already spent: not adopted).
+- **Determinism.** Seeded replay; two identical runs produce byte-identical event sequences, alerts, and evaluation reports. No wall-clock time in any scored field; event time only.
+- **Measurement norm.** Every performance or cost number this project reports follows the 681 benchmarks methodology: executed statistics, caches off, median of repeated runs (`docs_legacy/benchmarks/`).
+- **No dbt, Dagster, BigQuery, or GCS in the runtime path.** The plan (not yet executed): BigQuery appears exactly once more, in the one-time export scripts, and dies with them. Those scripts do not exist yet; see `docs/PLAN.md` Step 0.
 
-## 3. Medallion Architecture
+## 3. Leakage rule (carried verbatim from the 681 rulebook's section 9, `docs_legacy/CLAUDE_MD_LEGACY.md`)
 
-| Layer  | Storage                                   | Mutability | Owner            |
-|--------|-------------------------------------------|------------|------------------|
-| Bronze | **Raw CSV in a GCS bucket**               | Immutable  | `ingestion/`     |
-| Silver | **Native BigQuery tables**                | Rebuildable| dbt (`silver/`)  |
-| Gold   | **Native BigQuery tables**                | Rebuildable| dbt (`gold/`)    |
+> - **Leakage rule (critical):** predictors may use **only information knowable
+>   before departure**. Anything realized at/after departure or arrival
+>   (`DepDelay`, `ArrDelay`, `ArrDelayMinutes`, actual gate/wheels times,
+>   diverted/cancelled outcomes, `ArrDel15` for the classifier's features, etc.)
+>   is a **label or forbidden feature**, never an input. Weather features must use
+>   forecast-available / historical data, not same-flight realized conditions.
+>   When adding a feature, explicitly justify it is pre-departure-known.
+>   The rule extends to LINKAGE, not just values (decided 2026-07, the
+>   tail-swap experiment): rotation features chain legs by the post-hoc
+>   OPERATED tail, and a swap-restructured linkage is itself a day-of outcome —
+>   so rotation features exist **only for schedule-consistent links**
+>   (swap-shaped: NULL). The experiment: 89% of the cascade uplift survived
+>   the restriction; the mechanism (no_inbound band rate 0.388→0.224 clean)
+>   and the full three-way comparison live in `int_aircraft_rotation`'s
+>   header and PR #18. Current held-out headline: **ROC 0.7389 /
+>   PR-AUC 0.4652** (restricted; details in `ml/README.md`).
 
-- **Bronze** is append-only, immutable raw CSV in GCS, **partitioned by
-  `year` and `month`** using a Hive-style path layout:
-  `gs://<bucket>/bronze/<source>/year=<YYYY>/month=<MM>/*.csv`.
-  Documented deviation (approved 2026-07): **ISD hourly** partitions by
-  `year=` only — station-YEAR is the source's natural file grain — and
-  carries a derived NDJSON **access layer** (`bronze/isd_hourly_jsonl/`,
-  values verbatim) because its per-station heterogeneous CSV columns cannot
-  feed a positional CSV external table; the raw CSVs remain the immutable
-  record.
-  Bronze is exposed to BigQuery as **external tables** in the `bronze` dataset
-  (dbt reads these as `sources`). We never rewrite bronze in place; corrections
-  land as new partitions. Documented exception: `ingestion.bts --force` and
-  `ingestion.isd --force` are repair-only deviations that rewrite a partition
-  in place and log loudly — never for routine updates.
-- **Silver** = cleaned, typed, conformed BigQuery tables/views (deduped, casted,
-  standardized keys). Rebuildable from bronze.
-- **Gold** = analytics-ready BigQuery tables (star schema + ML mart).
-  Rebuildable from silver.
+Adaptation notes (not part of the quoted rule): "PR #18" resolves against the original lakehouse repo; the recovered experiment write-up lives at `docs_legacy/tail_swap_experiment.md`. In this project the rule's serve-time enforcement is the consumer: swap-shaped links yield NULL cascade features in-stream, proven by the leakage test suite and the full-week rotation parity check. The weather sentence's "forecast-available" requirement is exactly what the TAF study measures; training used the last observation at or before scheduled departure, a recorded deviation this project quantifies.
 
-## 4. Data Models (Gold)
+## 4. Model adoption and MLflow (carried verbatim from the 681 rulebook's section 9, `docs_legacy/CLAUDE_MD_LEGACY.md`)
 
-Two independent consumption models live in gold:
+> - **Experiment tracking & model comparison.** MLflow (`ml/tracking.py`) tracks
+>   every training run — **artifacts to `gs://$GCS_BUCKET/mlflow`, run metadata in
+>   a local SQLite backend** (`mlflow.db`, git-ignored; a tracking server is the
+>   upgrade path for cloud metadata). Tracking is a **pure side effect**: it never
+>   changes fits, `metrics.json`, or determinism, and degrades to a warning if
+>   MLflow/GCS is unreachable (a tracking outage must never fail a run).
+>   Alternative learners are explored in `ml/experiments.py` on the **identical
+>   split/features** — only the learner changes; the leakage boundary above is
+>   fixed — and the shipped model changes only when an alternative **wins the
+>   validation selection** against it, with the held-out test used as a one-time
+>   confirmation report, never the adoption gate (adopting on a test comparison
+>   re-selects on test; see `docs/leakage_discipline.md` rule 7).
 
-1. **Star schema** for BI/analytics:
-   - `fact_flights` (one row per flight leg)
-   - `dim_airport`, `dim_carrier`, `dim_date`
-2. **Wide flat ML feature mart** — a separate, denormalized, one-row-per-flight
-   table purpose-built for model training/inference. It is **not** the star
-   schema; do not make ML consumers join dimensions at train time.
+Adaptation notes (not part of the quoted rule): the artifact store re-points from `gs://$GCS_BUCKET/mlflow` to a local path; the SQLite metadata backend and the pure-side-effect property are unchanged and binding. Evaluation runs (streaming eval, TAF horizon study, drift) are logged as tracked runs. `ml/experiments.py` is deleted with the model search concluded; the adoption rule itself outlives it and governs any future learner or feature change, including any retrain triggered by the TAF study.
 
-## 5. Transforms
+## 5. Repo layout
 
-- **Silver → Gold transforms are BigQuery SQL, orchestrated by dbt Core with the
-  `dbt-bigquery` adapter.** No pandas/Python transforms for silver/gold logic.
-  Rationale — measured volumes, monthly cadence, the alternatives rejected, and
-  the conditions under which this choice would be wrong — is in
-  `docs/compute_choice.md`.
-- dbt uses **three separate BigQuery datasets**: `bronze`, `silver`, `gold`
-  (names configurable via env vars, defaults `flight_delays_bronze` /
-  `_silver` / `_gold`). A `generate_schema_name` macro maps each model's
-  `+schema` to the dataset name **verbatim** (no target-name prefixing).
-- dbt auth is ADC via `method: oauth` in `dbt/profiles.yml`.
-- Python (`ingestion/`, `ml/`) handles **only** extract/load into bronze and
-  model training/scoring — never the silver/gold business logic.
-
-## 6. Orchestration
-
-- **Dagster** orchestrates the end-to-end DAG (ingest → dbt → ML).
-- **Added last.** The `orchestration/` package is a deliberate placeholder until
-  ingestion, dbt models, and the ML pipeline exist and run standalone. Do not
-  build orchestration before the things it orchestrates.
-
-## 7. Tooling & Environments
-
-- **Python is managed with `uv`.** One repo, one `pyproject.toml`, one `uv.lock`.
-  Use `uv run ...` / `uv sync`. Never call `pip` directly.
-- Optional-dependency extras group the stacks: `ingestion`, `transform` (dbt),
-  `orchestration` (dagster), `ml`. Dev tooling is in the `dev` dependency group.
-- If dbt + dagster + ML ever fail to co-resolve in one environment, split into a
-  `uv` workspace with per-member environments — do **not** drop back to pip.
-
-## 8. Sources
-
-| Source                     | Origin                                              | Lands as                                  |
-|----------------------------|-----------------------------------------------------|-------------------------------------------|
-| BTS On-Time Performance    | Bureau of Transportation Statistics, **2022–2024**  | Bronze CSV in GCS (partitioned yr/month)  |
-| NOAA ISD Global Hourly     | NCEI, mapped stations, **2022–2024**                | Bronze station-year CSV in GCS (`year=` partitions + NDJSON access layer) |
-| NOAA GSOD weather          | BigQuery public data `bigquery-public-data.noaa_gsod` | Referenced directly as a dbt source     |
-| Airport coordinates + tz   | Static reference (e.g. OurAirports)                 | **dbt seed** (bronze dataset)              |
-| US holiday calendar        | Generated (Python `holidays` library)               | **dbt seed** (bronze dataset)              |
-
-- NOAA GSOD is read **in place** from the public dataset; it is not copied into
-  bronze. Since the 2026-07 hourly rebuild its role is the station registry
-  behind `airport_station_map`; **ML origin weather comes from ISD hourly**
-  (the last observation at or before scheduled departure). BTS and ISD land
-  in bronze; airports and holidays are **dbt seeds** (decided
-  2026-07: seeds, not bronze CSV — referenced via `ref()`, never declared as
-  sources; tradeoff and size escape hatch in `dbt/seeds/README.md`).
-
-## 9. ML
-
-- **Two models, one time-based split** (train on earlier dates, test on later —
-  never a random split; avoid temporal leakage).
-  1. **Classification** of `ArrDel15` (arrival delayed ≥15 min: yes/no).
-  2. **Regression** of `ArrDelayMinutes`.
-- **Leakage rule (critical):** predictors may use **only information knowable
-  before departure**. Anything realized at/after departure or arrival
-  (`DepDelay`, `ArrDelay`, `ArrDelayMinutes`, actual gate/wheels times,
-  diverted/cancelled outcomes, `ArrDel15` for the classifier's features, etc.)
-  is a **label or forbidden feature**, never an input. Weather features must use
-  forecast-available / historical data, not same-flight realized conditions.
-  When adding a feature, explicitly justify it is pre-departure-known.
-  The rule extends to LINKAGE, not just values (decided 2026-07, the
-  tail-swap experiment): rotation features chain legs by the post-hoc
-  OPERATED tail, and a swap-restructured linkage is itself a day-of outcome —
-  so rotation features exist **only for schedule-consistent links**
-  (swap-shaped: NULL). The experiment: 89% of the cascade uplift survived
-  the restriction; the mechanism (no_inbound band rate 0.388→0.224 clean)
-  and the full three-way comparison live in `int_aircraft_rotation`'s
-  header and PR #18. Current held-out headline: **ROC 0.7389 /
-  PR-AUC 0.4652** (restricted; details in `ml/README.md`).
-- **Experiment tracking & model comparison.** MLflow (`ml/tracking.py`) tracks
-  every training run — **artifacts to `gs://$GCS_BUCKET/mlflow`, run metadata in
-  a local SQLite backend** (`mlflow.db`, git-ignored; a tracking server is the
-  upgrade path for cloud metadata). Tracking is a **pure side effect**: it never
-  changes fits, `metrics.json`, or determinism, and degrades to a warning if
-  MLflow/GCS is unreachable (a tracking outage must never fail a run).
-  Alternative learners are explored in `ml/experiments.py` on the **identical
-  split/features** — only the learner changes; the leakage boundary above is
-  fixed — and the shipped model changes only when an alternative **wins the
-  validation selection** against it, with the held-out test used as a one-time
-  confirmation report, never the adoption gate (adopting on a test comparison
-  re-selects on test; see `docs/leakage_discipline.md` rule 7).
-
-## 10. Repo Layout (see README for detail)
+This is the TARGET layout after the deletion audit in `docs/PLAN.md` executes. Today, `dbt/`, `orchestration/`, `dashboard/`, and most of `ingestion/` still exist pending their audit verdicts, and `streaming/` and `data/` do not exist yet.
 
 ```
-ingestion/      Python: extract sources → bronze CSV in GCS
-dbt/            dbt Core (BigQuery): bronze sources → silver → gold
-orchestration/  Dagster code location (placeholder, added last)
-ml/             Python: feature build, time-split, train/eval two models
+streaming/      producer, consumer, rotation state, constants, evaluator, tests
+data/           committed replay week, lookups, golden vectors (sanctioned git data)
+ml/             kept modules: features, serving core, calibration, parity, tracking
+docs/           live project documentation (this rulebook, plan, schemas, sources)
+docs_legacy/    inherited 681 material: reference and provenance only, never policy
 ```
 
-## 11. Conventions
+- `docs/` holds live policy; `docs_legacy/` holds inherited 681 material, reference only, never instructions. No third documentation location. `docs/leakage_discipline.md` is live policy (rules 7 and 12 govern current work).
+- Committed data is the sanctioned exception to the old "data never lives in git" rule, limited to: the replay week, the outcome sample, the serving lookups, golden vectors, and the seeds. The model artifact ships as a release asset if it exceeds comfortable repo size.
 
-- Config & secrets flow through env vars only; `.env` is git-ignored,
-  `.env.example` is the committed template.
-- Data never lives in git (bronze is in GCS; silver/gold in BigQuery). The repo
-  holds code and config, plus small static seeds.
-- Prefer SQL in dbt for anything set-based over BigQuery; reserve Python for I/O
-  and modeling.
+## 6. Tooling and conventions
+
+- Python via `uv`, one `pyproject.toml`, one lock. Extras: `kafka` (streaming stack), `ml` (inference). Never call pip.
+- Config through env vars from `.env` (git-ignored; `.env.example` is the template and lists only Kafka and Schema Registry variables).
+- Cost ceiling: under $5 incremental, target $0. Nothing a reviewer runs requires cloud credentials or spends money.
+- Style for documentation: plain declarative prose, short paragraphs, no em-dashes, technical terms explained once at first use.

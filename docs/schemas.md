@@ -8,7 +8,7 @@ Every field carries a custom `knowable_at` property with one of three values:
 - `pre_departure_stream`: derived in the stream strictly before the scheduled departure time T (scores, bands, trailing-window pressure counts). Safe to emit at T; never an input to anything scored at an earlier T.
 - `post_departure`: realized outcomes. Never a model input; exists only on the outcomes topic and in the evaluator.
 
-The leakage rule this encodes is CLAUDE.md section 9 including the linkage clause. The machine-readable field sets live in `streaming/constants.py`; a contract test asserts no `post_departure` field appears in the departures or delay_risk schemas.
+The leakage rule this encodes is CLAUDE.md section 3 (the rule carried verbatim from the 681 rulebook's section 9), including the linkage clause. The machine-readable field sets live in `streaming/constants.py`; a contract test asserts no `post_departure` field appears in the departures or delay_risk schemas.
 
 ## Keying and partitioning
 
@@ -41,7 +41,7 @@ The event is deliberately lean: identity plus schedule primitives. Calendar feat
 }
 ```
 
-Honesty note on `tail_number`: BTS records the tail that OPERATED the flight, post hoc. The event carries it as the stream key because rotation state needs it, but the consumer trusts only schedule-consistent linkages built from it; swap-shaped linkages null the whole rotation block. The linkage discipline, not the field itself, is what keeps this pre-departure-safe (CLAUDE.md section 9, linkage clause).
+Honesty note on `tail_number`: BTS records the tail that OPERATED the flight, post hoc. The event carries it as the stream key because rotation state needs it, but the consumer trusts only schedule-consistent linkages built from it; swap-shaped linkages null the whole rotation block. The linkage discipline, not the field itself, is what keeps this pre-departure-safe (CLAUDE.md section 3, linkage clause).
 
 ## 2. `flight.outcomes.v1` (topic; outcome fields `knowable_at: post_departure`)
 

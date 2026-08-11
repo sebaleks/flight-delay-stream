@@ -52,8 +52,7 @@ BINDING CONSTRAINTS
 - Use uv for everything Python. Never call pip.
 
 DO NOT TOUCH
-- CLAUDE.md (read-only; its section 0 is the authority, sections 1-11 are
-  681 reference only), docs_legacy/, dbt/, dashboard/, orchestration/, ingestion/,
+- CLAUDE.md (read-only; the live streaming rulebook), docs_legacy/, dbt/, dashboard/, orchestration/, ingestion/,
   any file under ml/, and anything that talks to GCP.
 
 STYLE
@@ -151,8 +150,7 @@ BINDING CONSTRAINTS
 - Never call BigQuery or GCS. Everything reads from local files.
 
 DO NOT TOUCH
-- CLAUDE.md (read-only; its section 0 is the authority, sections 1-11 are
-  681 reference only), docs_legacy/, dbt/, dashboard/, orchestration/, ingestion/,
+- CLAUDE.md (read-only; the live streaming rulebook), docs_legacy/, dbt/, dashboard/, orchestration/, ingestion/,
   ml/ modules (read them, import them, do not edit them), the exported
   parquet files (read-only inputs).
 
@@ -250,8 +248,7 @@ BINDING CONSTRAINTS
   enter state or features. Schedule columns only.
 
 DO NOT TOUCH
-- CLAUDE.md (read-only; its section 0 is the authority, sections 1-11 are
-  681 reference only), docs_legacy/, dbt/, dashboard/, orchestration/, ingestion/,
+- CLAUDE.md (read-only; the live streaming rulebook), docs_legacy/, dbt/, dashboard/, orchestration/, ingestion/,
   ml/ modules, exported parquet files.
 
 STYLE
@@ -315,8 +312,7 @@ BINDING CONSTRAINTS
   alerts.jsonl.
 
 DO NOT TOUCH
-- CLAUDE.md (read-only; its section 0 is the authority, sections 1-11 are
-  681 reference only), docs_legacy/, dbt/, dashboard/, orchestration/, ingestion/,
+- CLAUDE.md (read-only; the live streaming rulebook), docs_legacy/, dbt/, dashboard/, orchestration/, ingestion/,
   ml/ modules, exported parquet files.
 
 STYLE
@@ -393,8 +389,7 @@ BINDING CONSTRAINTS
   the TAF file is the only forecast source. Determinism throughout.
 
 DO NOT TOUCH
-- CLAUDE.md (read-only; its section 0 is the authority, sections 1-11 are
-  681 reference only), docs_legacy/, dbt/, dashboard/, orchestration/, ingestion/,
+- CLAUDE.md (read-only; the live streaming rulebook), docs_legacy/, dbt/, dashboard/, orchestration/, ingestion/,
   ml/ modules, exported parquet files.
 
 STYLE
