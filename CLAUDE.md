@@ -1,8 +1,21 @@
-# CLAUDE.md — Flight-Delay Lakehouse
+# CLAUDE.md — Flight-Delay Streaming (MSDS 682)
 
-Project guidance for Claude Code. These are **binding architectural decisions**.
-Keep them in mind for every change; if a request conflicts with one, flag it
-before proceeding rather than silently diverging.
+## 0. STATUS — this repo is the MSDS 682 streaming project
+
+Sections 1-11 below describe the MSDS 681 batch lakehouse this repo was
+copied from. They are RETAINED AS REFERENCE, not as binding decisions.
+Do not apply them to new work.
+
+Binding for current work: Kafka + Avro/Schema Registry, local Docker
+Compose primary, tail-keyed topics, `streaming/` package, no dbt/Dagster/
+BigQuery in the runtime path. The leakage rule in section 9, including the
+linkage clause, and the MLflow adoption rule REMAIN BINDING.
+Full replacement drafted later at docs/CLAUDE_MD_PROPOSED.md.
+
+---
+
+Sections 1-11 record the MSDS 681 lakehouse architecture and are
+historical reference. Section 0 above is binding.
 
 ---
 
