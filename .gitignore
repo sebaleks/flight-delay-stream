@@ -10,13 +10,15 @@ gcp-*.json
 credentials/
 application_default_credentials.json
 
-# ---- Local data (bronze lives in GCS, silver/gold in BigQuery) ----
-data/
+# ---- Local data (MSDS 682: the replay week, lookups, golden files, and
+# weather exports under data/ ARE tracked — the sanctioned git-data
+# exceptions in CLAUDE.md section 5. Raw BTS zips stay out of git.) ----
+data/bts/*.zip
 .data/
-*.parquet
 *.feather
 *.orc
 # NOTE: *.csv is intentionally NOT ignored so dbt seeds in dbt/seeds/ are tracked.
+# NOTE: *.parquet is intentionally NOT ignored so the data/ exports are tracked.
 
 # ---- Python / uv virtualenvs ----
 .venv/

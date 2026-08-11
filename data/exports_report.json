@@ -1,0 +1,53 @@
+{
+  "generated_utc": "2026-08-11T22:05:02.665535+00:00",
+  "week_start": "2024-09-02",
+  "week_end": "2024-09-08",
+  "warmup_day": "2024-09-01",
+  "typicality_origin": "ORD",
+  "artifact_run": "20260730_145241",
+  "row_counts": {
+    "departures_week": -1,
+    "outcomes_week": -1,
+    "isd_week": -1,
+    "entity_profile": -1,
+    "density_profile": -1,
+    "typical_rotation": -1,
+    "airports": -1,
+    "airport_station_map": -1,
+    "rotation_reference_week": -1,
+    "features_week_sample": 5000,
+    "taf_rows": 65425
+  },
+  "tails": {
+    "distinct_tails": 6682,
+    "week_tails": 5314,
+    "multi_carrier_tails_ever": 49,
+    "multi_carrier_tails_week": 0,
+    "null_tail_rows": 70198
+  },
+  "taf_stations_no_data": [
+    "KABY",
+    "PADK",
+    "KAZO",
+    "KBFF",
+    "KBGM",
+    "KBHM",
+    "KBJI",
+    "KBLV",
+    "KBQK",
+    "KCHS",
+    "KDAL",
+    "KDLH",
+    "KEGE",
+    "KESC",
+    "KGRK",
+    "KHGR",
+    "KHXD",
+    "KIMT",
+    "KMVY",
+    "KJQF",
+    "KVPS",
+    "KNYL"
+  ],
+  "origins_unmapped_to_icao": []
+}
