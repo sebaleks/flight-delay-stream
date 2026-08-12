@@ -55,13 +55,17 @@ def build_rotation_frame(df: pd.DataFrame) -> pd.DataFrame:
 
     out = df.copy()
     out["_order"] = np.arange(len(out))
-    known = out["tail_number"].notna() & (out["tail_number"] != "")
     # the mart's exact total order (int_aircraft_rotation.sql:103-113):
     # dep_ts_utc, then carrier, flight_number, origin, dest
     out = out.sort_values(
         ["tail_number", "dep_ts_utc_ms", "carrier", "flight_number", "origin", "dest"],
         kind="mergesort", na_position="last",
     )
+    # AFTER the sort: .shift() is positional, so a pre-sort `known` would
+    # shift over the original row order while every other lag runs over the
+    # sorted order — a leg whose original-order neighbor had an unknown tail
+    # then lost its real predecessor (caught by the H3 stream parity run)
+    known = out["tail_number"].notna() & (out["tail_number"] != "")
 
     tail = out["tail_number"].where(known)
     same_tail = tail.eq(tail.shift()) & known & known.shift(fill_value=False)
