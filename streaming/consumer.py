@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import math
 from bisect import bisect_right
 from dataclasses import dataclass, field
@@ -363,10 +364,14 @@ def _decode_event(raw: dict) -> dict:
 
 
 class Scorer:
-    def __init__(self) -> None:
+    def __init__(self, alerts_path: Path | None = None) -> None:
         self.lookups = load_lookups()
         self.rotation = RotationTracker(load_day_leg_counts())
         self.clf, self.calibrator, self.model_run_id = load_scoring_artifacts()
+        # the run's whole artifact: truncate on start so two identical replay
+        # runs produce byte-identical files (docs/schemas.md contract 4)
+        self.alerts_path = alerts_path or REPO / "alerts.jsonl"
+        self._alerts = self.alerts_path.open("w", encoding="utf-8")
         self.booster_names = list(self.clf.get_booster().feature_names)
         sr = SchemaRegistryClient({"url": registry_url()})
         self.deserialize = AvroDeserializer(sr, IN_SCHEMA)
@@ -390,6 +395,27 @@ class Scorer:
         if err is not None:
             self.delivery_errors.append(str(err))
 
+    def _write_alert(self, ev: dict, p: float) -> None:
+        """One JSON line per alert (docs/schemas.md contract 4). issued_at is
+        T, event time — never wall clock — so replays are byte-identical."""
+        line = json.dumps(
+            {
+                "flight_date": ev["flight_date"].isoformat(),
+                "carrier": ev["carrier"],
+                "flight_number": ev["flight_number"],
+                "origin": ev["origin"],
+                "dest": ev["dest"],
+                "crs_dep_time": ev["crs_dep_time"],
+                "delay_probability": p,
+                "risk_band": c.risk_band(p),
+                "threshold": c.ALERT_THRESHOLD,
+                "issued_at": ev["crs_dep_ts_utc"].isoformat(),
+                "mode": ev["mode"],
+            },
+            sort_keys=True,
+        )
+        self._alerts.write(line + "\n")
+
     def score_chunk(self, events: list[dict]) -> None:
         if not events:
             return
@@ -409,6 +435,8 @@ class Scorer:
         for ev, wb, basis, p in zip(events, weather_bases, bases, p_cal, strict=True):
             p = float(p)
             alert = p >= c.ALERT_THRESHOLD
+            if alert:
+                self._write_alert(ev, p)
             out = {
                 "flight_date": ev["flight_date"],
                 "carrier": ev["carrier"],
@@ -443,6 +471,9 @@ class Scorer:
             self.alerts += int(alert)
             self.bases[basis] = self.bases.get(basis, 0) + 1
         self.producer.flush()
+        # alert lines land on disk before the chunk's offsets can commit —
+        # the same process-first-commit-second discipline as the risk topic
+        self._alerts.flush()
         if self.delivery_errors:
             raise SystemExit(f"delivery failed for {len(self.delivery_errors)} events: "
                              f"{self.delivery_errors[:3]}")
@@ -501,11 +532,12 @@ def run(follow: bool, group: str) -> None:
                 drain()
     finally:
         consumer.close()
+        scorer._alerts.close()
 
     print(
         f"scored {scorer.scored} events to {OUT_TOPIC} "
-        f"(alerts {scorer.alerts} at p>={c.ALERT_THRESHOLD}, bases {scorer.bases}, "
-        f"model {scorer.model_run_id}, day-legs lookup misses "
+        f"(alerts {scorer.alerts} at p>={c.ALERT_THRESHOLD} -> {scorer.alerts_path.name}, "
+        f"bases {scorer.bases}, model {scorer.model_run_id}, day-legs lookup misses "
         f"{scorer.rotation.day_legs_misses})"
     )
 
