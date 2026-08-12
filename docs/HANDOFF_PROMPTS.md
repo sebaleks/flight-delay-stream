@@ -8,6 +8,25 @@ The schedule these prompts serve is in `docs/PLAN.md`. The event contracts are i
 
 ---
 
+## Sync points and what to report (read this first)
+
+**Already built, on main, gate-passed. Do not rebuild any of it:** the constants module (`streaming/constants.py`), the four Avro contracts registered BACKWARD, both producers (departures byte-identical across same-seed runs; outcomes at actual-arrival event time), the outcome-join evaluator with nine conservation-tested counters, the Makefile and README rehearsed clean on a fresh clone, the drift measurement (`data/drift_report.json`), and `streaming/rotation_batch.py` (H3's batch twin).
+
+**Solo gates vs checkpoints.** H1, H3, H4, and H5 are yours to clear alone. H2's gate is the trigger for **Sync 2**, which needs both of us: your consumer fills `flight.delay_risk.v1` and `make eval` flips from 151,878 `orphan_outcome` to a live headline. Ping Seb the moment H2 is green; do not continue to H3 first.
+
+**Report one line per gate**, so state is visible without reading diffs:
+- H1: "H1 green: stack healthy on my machine, smoke PASS on all four steps."
+- H2: "H2 green: N scored events on delay_risk, golden check 20/20." (this line triggers Sync 2)
+- H3: "H3: class shares a/b/c = X/Y/Z, batch-twin mismatches N, mart residue M."
+- H4: "H4 green: leakage tests pass, the deliberate-violation test fails as designed, alerts N of M scored."
+- H5: "H5: TAF coverage X, per-bin table done, trigger verdict Y" (or the 13:00 no-go line).
+
+**Known Sync 2 risks. Pre-empt them:** risk-event field name or type mismatches that only surface on real deserialization (validate against the REGISTERED schema early, not just your own dicts); a consumer that does not exit at EOF hangs `make demo` (the batch-mode contract in H2 task step 5); a consumer group or partition assignment that fights the topic layout (6 partitions, partition 0 is the NOTAIL sentinel; use a fresh group id and read all partitions).
+
+**When something is unclear:** `docs/PLAN.md` for schedule and decisions, `docs/schemas.md` for contracts, and the live `CLAUDE.md` section 2 for the binding architectural decisions.
+
+---
+
 ## H1: Environment and Kafka stack (Day 1, 09:45)
 
 ```
