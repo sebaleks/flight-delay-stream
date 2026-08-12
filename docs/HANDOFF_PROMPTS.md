@@ -85,8 +85,10 @@ PREFLIGHT (stop and report if any item is missing)
 - data/replay/departures_week.parquet exists.
 - ml/artifacts/ contains one run directory with xgb_classifier.ubj and
   calibrator.joblib. If absent (fresh clone; the run is git-ignored), run
-  `bash scripts/fetch_artifacts.sh` to pull it from the GitHub release; if
-  the release is not published yet, stop and ask Seb.
+  `bash scripts/fetch_artifacts.sh`: phase 1 pulls exactly what scoring
+  needs and prints READY FOR H2; the 438 MB regressor comes last and is
+  optional. If ml.serving.load_models complains about a missing regressor,
+  either let phase 2 finish or load the classifier and calibrator directly.
 - data/golden/features_week_sample.parquet exists (5,000 full 51-feature mart
   rows for the replay week; the enrichment golden reference).
 - data/golden/parity_before_migration.json exists (184 request-level parity
@@ -426,7 +428,7 @@ open issues. If no-go: the one-line future-work note and where you stopped.
 | Prompt | Blocks on |
 |---|---|
 | H1 | nothing (stack, extras, and admin already exist; verify on your machine) |
-| H2 | H1 gate; everything else is on main (`data/lookups/*`, `data/replay/departures_week.parquet`, `data/weather/isd_week.parquet`, `data/golden/features_week_sample.parquet`, `data/golden/parity_before_migration.json`); `ml/artifacts/<run>/` via `scripts/fetch_artifacts.sh` (release pending Seb) |
+| H2 | H1 gate; everything else is on main (`data/lookups/*`, `data/replay/departures_week.parquet`, `data/weather/isd_week.parquet`, `data/golden/features_week_sample.parquet`, `data/golden/parity_before_migration.json`); `ml/artifacts/<run>/` via `scripts/fetch_artifacts.sh` (release live; phase 1 suffices) |
 | H3 | H2 gate; `data/golden/rotation_reference_week.parquet` present |
 | H4 | H3 gate; `docs/schemas.md` present |
 | H5 | Day 2 sync decision; `data/weather/taf_week.csv` present; observed-weather baseline scored |
