@@ -112,6 +112,22 @@ HIST_SMOOTHING_PRIOR_STRENGTH = 50
 # never tuned on the replay week).
 ALERT_THRESHOLD = 0.5
 
+# --- Risk banding -----------------------------------------------------------
+
+# delay_risk.risk_band is the calibrated probability's decile bucket, rendered
+# "0.5-0.6" (top band "0.9-1.0", inclusive at 1.0). Source: docs/schemas.md
+# contract 3 ("band edges from streaming/constants.py") and the evaluator's
+# fixture shape (streaming/test_evaluator.py). Banding is presentation only;
+# alerting compares the calibrated p to ALERT_THRESHOLD directly.
+RISK_BAND_WIDTH = 0.1
+
+
+def risk_band(p: float) -> str:
+    """Decile band label for a calibrated probability in [0, 1]."""
+    lo = min(int(p * 10), 9)
+    return f"{lo / 10:.1f}-{(lo + 1) / 10:.1f}"
+
+
 # --- knowable_at field sets (docs/schemas.md) -------------------------------
 
 # Fields knowable at booking from the published schedule. The departures
