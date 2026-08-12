@@ -77,7 +77,26 @@ docs_legacy/    inherited 681 material: reference and provenance only, never pol
 
 ## 6. Tooling and conventions
 
-- Python via `uv`, one `pyproject.toml`, one lock. Extras: `kafka` (streaming stack), `ml` (inference). Never call pip.
+- Python via `uv`, one `pyproject.toml`, one lock. Extras in the runtime path: `kafka` (streaming stack), `ml` (inference), `serve`, `ingestion`; the legacy `transform`/`orchestration`/`dashboard` extras persist only until the deletion audit executes. Never call pip.
 - Config through env vars from `.env` (git-ignored; `.env.example` is the template and lists only Kafka and Schema Registry variables).
 - Cost ceiling: under $5 incremental, target $0. Nothing a reviewer runs requires cloud credentials or spends money.
 - Style for documentation: plain declarative prose, short paragraphs, no em-dashes, technical terms explained once at first use.
+
+## 7. Commands
+
+The Makefile is the entry point; its `UV` variable (`uv run --extra kafka --extra ml --extra serve --extra ingestion`) is the canonical way to run any module.
+
+```bash
+uv sync --extra kafka --extra ml --extra serve --extra ingestion  # one-time setup
+make demo    # up + recreate topics + register contracts + replay week + evaluation
+make eval    # outcome-join evaluation report only
+make test    # pytest streaming/ -q, then ruff check streaming/ scripts/
+make up      # docker compose up -d --wait (Kafka + Schema Registry, KRaft)
+make down    # docker compose down -v (wipes broker and registry state)
+make reset   # up + recreate the three topics + register contracts
+```
+
+- Single test file: `uv run --extra kafka --extra ml --extra serve --extra ingestion python -m pytest streaming/test_evaluator.py -q` (tests live beside the code in `streaming/` as `test_*.py`; no cloud credentials needed).
+- `make demo` recreates topics first, so every run is a clean deterministic replay. Two runs must produce byte-identical outputs; treat any diff as a bug.
+- Model artifacts for the consumer: `bash scripts/fetch_artifacts.sh` downloads the frozen 2024-06-30 run into `ml/artifacts/` from the GitHub release. Not needed for `make demo` while the consumer is unbuilt.
+- Work is sequenced as handoff prompts in `docs/HANDOFF_PROMPTS.md` (H2/H3 build the scoring consumer); check it and `docs/PLAN.md` for what is and is not built yet before assuming a component exists. Until the consumer lands, `make demo` reports every outcome as `orphan_outcome` by design.
