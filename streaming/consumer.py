@@ -395,6 +395,29 @@ class Scorer:
         if err is not None:
             self.delivery_errors.append(str(err))
 
+    def finalize_alerts(self) -> None:
+        """Rewrite the completed run's artifact in canonical event-time order.
+
+        Alert lines stream out in Kafka poll order, and partition interleave
+        varies run to run — the double-run gate caught two identical replays
+        producing identical LINES in different ORDER. The mid-run file stays
+        append-ordered (crash-safe, flushed before each offset commit); a
+        cleanly completed batch run rewrites it sorted by (issued_at, flight
+        identity), which is where the byte-identical guarantee lives.
+        """
+        self._alerts.close()
+        records = [
+            json.loads(line)
+            for line in self.alerts_path.read_text(encoding="utf-8").splitlines()
+        ]
+        records.sort(
+            key=lambda r: (r["issued_at"], r["carrier"], r["flight_number"],
+                           r["origin"], r["dest"])
+        )
+        with self.alerts_path.open("w", encoding="utf-8") as out:
+            for r in records:
+                out.write(json.dumps(r, sort_keys=True) + "\n")
+
     def _write_alert(self, ev: dict, p: float) -> None:
         """One JSON line per alert (docs/schemas.md contract 4). issued_at is
         T, event time — never wall clock — so replays are byte-identical."""
@@ -532,8 +555,8 @@ def run(follow: bool, group: str) -> None:
                 drain()
     finally:
         consumer.close()
-        scorer._alerts.close()
 
+    scorer.finalize_alerts()  # clean batch completion: canonical order
     print(
         f"scored {scorer.scored} events to {OUT_TOPIC} "
         f"(alerts {scorer.alerts} at p>={c.ALERT_THRESHOLD} -> {scorer.alerts_path.name}, "
