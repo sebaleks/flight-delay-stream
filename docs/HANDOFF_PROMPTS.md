@@ -198,6 +198,9 @@ PREFLIGHT (stop and report if any item is missing)
 - data/golden/rotation_reference_week.parquet exists (the 681 warehouse's
   rotation feature columns for every leg of the replay week; this is your
   parity target).
+- streaming/rotation_batch.py exists (the drift job's independent batch
+  implementation of this same rule, validated against the mart to a 0.18%
+  boundary residue; see THE BATCH TWIN below).
 
 THE RULE (from streaming/constants.py; the authoritative prose is in
 docs_legacy/tail_swap_experiment.md and dbt/models/gold/shared/
@@ -231,6 +234,24 @@ excluded from evaluation.
 All thresholds come from streaming/constants.py. If a needed constant is
 missing there, STOP and report; do not define it locally.
 
+THE BATCH TWIN, AND THE THREE SEMANTICS THAT COST A DEBUGGING SESSION
+streaming/rotation_batch.py already implements this rule in batch form and
+is validated against the mart's replay-week values to a 0.18% residue. Read
+it before writing the state machine. Match these three behaviors exactly;
+they caused a 10,701-cell mismatch until found:
+1. Per-tail windows: a tail's FIRST leg has a NULL gap. A shift that
+   crosses tail boundaries computes a garbage gap against another tail's
+   arrival and taints the successor through the overlap rule.
+2. Gap minutes are integer-truncated toward zero (BigQuery timestamp_diff
+   semantics): a -30 second gap is 0 minutes, inside the duty window.
+3. prior_leg_overlapped is a fail-closed taint: a leg whose OWN gap is
+   negative is untrustworthy, and its SUCCESSOR must not treat it as a
+   consistent inbound even when the successor's own gap and continuity
+   look clean.
+Also expect an irreducible cold-start residue at the warm-up boundary
+(chains that reach before 2024-09-01; the batch twin measures 0.18% of
+rows). It is expected: report the counts, do not tune it away.
+
 TASK
 1. Implement the state machine in streaming/rotation.py, wired into
    consumer.py, replacing the H2 stub. Set rotation_state_basis to
@@ -238,9 +259,12 @@ TASK
 2. Write pytest cases for each class and each swap trigger, plus
    carrier-change reset and warm-up.
 3. Parity run: stream the full replay week through the consumer and compare
-   your emitted rotation features against
-   data/golden/rotation_reference_week.parquet on the flight key
-   (flight_date, carrier, flight_number, origin, dest, crs_dep_time).
+   your emitted rotation features against BOTH references on the flight key
+   (flight_date, carrier, flight_number, origin, dest, crs_dep_time):
+   data/golden/rotation_reference_week.parquet (the mart's values) AND
+   streaming/rotation_batch.py's output on the same frame. Two independent
+   implementations agreeing is stronger evidence than one passing its own
+   tests.
    Report class shares and the mismatch count per column. Interpret shares
    against the WEEK, not the 3-year training reference (91.95% consistent,
    3.93% clean first, 4.12% swap-shaped): within this week the unknown-tail
@@ -249,9 +273,11 @@ TASK
    the report so the cancelled-null-tail subset stays visible.
 
 GATE
-Zero mismatches, or every mismatch class counted and explained in one line
-each. Never silently drop a divergence. If mismatches remain unresolved at
-21:00, ship with the counts reported and flag for the Day 2 09:00 sync.
+Zero mismatches against the batch twin, and mart parity at or under its
+0.18% boundary residue, or every mismatch class counted and explained in
+one line each. Never silently drop a divergence. If mismatches remain
+unresolved at 21:00, ship with the counts reported and flag for the Day 2
+09:00 sync.
 
 VERIFY
 - pytest streaming/test_rotation.py green.

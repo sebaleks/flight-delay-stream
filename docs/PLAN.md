@@ -66,6 +66,8 @@ Flag on 3, standing: the submitted proposal may claim things that later get time
 
 Drift design under the 2024-H2 replay window: score both the 2024-H2 held-out set and the 2026 window with the same frozen model and the 12 weather features NULLed in both (the `has_origin_weather=false` path is in-distribution and trained), so the comparison is apples-to-apples on the schedule + rotation + hist regime. Disclose the regime. Prediction registered in advance: calibration degrades faster than ranking.
 
+**Drift: EXECUTED 2026-08-11, ahead of the TAF study.** That inverts the accepted Flag 1 ordering; recorded because the drift job was fully unblocked and needed nothing from Aidan, while the TAF study is his H5. Result (`data/drift_report.json`): ranking did not decay at 22-23 months (ROC 0.6966 to 0.6995, PR-AUC 0.4021 to 0.4184 partly on a higher base rate) while ECE grew 42% (0.0597 to 0.0849); the pre-registered prediction held. The one-line answer under questioning: both ECEs sit far above the calibrated 0.017 headline by construction, because the weather-NULL regime shifts the score distribution the Platt map was fit on; the regime is common to both windows, so the relative comparison is the finding and the absolute values are not comparable to the headline. Stale-lookup fallthrough is visible but small (hist_route NaN 0.09% to 1.22%, no new carriers).
+
 ## Wall-clock-bound work, fired first (Step 0)
 
 Everything here launches in background before any design work, and none of it is waited on serially:
@@ -77,6 +79,12 @@ Everything here launches in background before any design work, and none of it is
 - BTS 2026-05 PREZIP (one minute, verified live).
 - IEM TAF fetch for the replay week plus a 30-hour lookback into `data/weather/taf_week.csv` (about 15-25 MB at week scale).
 - `uv sync` after the `kafka` extra lands in `pyproject.toml`.
+
+## Build status (2026-08-11 evening; all pushed to main)
+
+Seb's half is complete through Sync 2. Done and gate-passed: constants module + source-pinning tests; three topics and three BACKWARD contracts registered; replay producer (byte-identical same-seed runs, 151,878 events); outcomes producer at actual-arrival event time; the TTL-bounded evaluator with nine conservation-tested counters; Makefile demo/eval/test rehearsed clean on a fresh clone (which caught and fixed the schema-registry healthcheck); the model-artifact release with the two-phase fetch script; the drift measurement (record above); handoff prompts audited current.
+
+Genuinely remaining on Seb's side: (1) the Sync 2 integration check when Aidan's consumer first fills `flight.delay_risk.v1`, plus refreshing the README quickstart's expected-output step from orphan_outcome to the live headline; (2) the day 2 17:00 shipped-versus-claimed audit that finalizes the deviations ledger above; (3) confirming the release's phase 2 assets (regressor, logreg) finished uploading so `scripts/fetch_artifacts.sh` phase 2 works; (4) the final clean-machine dress rehearsal with the full consumer path. Everything else in flight belongs to Aidan's H1-H5.
 
 ## The two-day schedule
 
@@ -115,8 +123,8 @@ Step 0 above, all in background. Step 1: `streaming/constants.py` plus unit test
 | Artifact size and distribution decision | Day 1, 11:00 | Release asset; slim to classifier + calibrator if oversized |
 | Rotation parity versus mart | Day 1, 21:00, then Day 2, 09:30 | Ship with divergence counts reported explicitly, never silently |
 | TAF parse to feature rows | Day 2, 13:00 | Drop the study; future work; the representation-mismatch analysis stands |
-| Drift measurement | Day 2, 14:30 | Future-work line with the elapsed-gap statement |
-| Confluent Cloud screenshot | Day 2, 15:30 | Local-only; proposal reworded to "documented deployment path" |
+| Drift measurement | DONE 2026-08-11 (early; see the drift record above) | n/a |
+| Confluent Cloud screenshot | CLOSED by Seb 2026-08-11 | n/a; ledger row records it |
 | Tier 1 live mode | not scheduled | Cut unless everything is green by Day 2, 15:00 |
 | Streamlit tail UI | cut now | Terminal consumer output |
 
@@ -292,9 +300,9 @@ The proposal (`docs/PROPOSAL_DRAFT.md`) is submitted and frozen; it is never edi
 
 | Proposal claim | What shipped | Status |
 |---|---|---|
-| Milestone 5: Confluent Cloud screenshot | pending the day 2 timebox (abandon 15:30) | open |
-| Milestone 5: drift check | pending the day 2 timebox (abandon 14:30) | open |
-| Milestone 4: TAF skill-by-horizon study | pending the day 2 go/no-go (13:00) | open |
+| Milestone 5: Confluent Cloud screenshot | item closed by Seb 2026-08-11; will not ship | closed, on record |
+| Milestone 5: drift check | DONE 2026-08-11, ahead of the TAF study (it was unblocked and needed nothing from Aidan); `data/drift_report.json` | shipped early |
+| Milestone 4: TAF skill-by-horizon study | pending the day 2 go/no-go (13:00); H5 | open |
 
 ## Non-goals
 

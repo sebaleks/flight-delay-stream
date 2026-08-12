@@ -417,6 +417,13 @@ def main() -> None:
             "side was not. This measures drift plus whatever the held-out numbers "
             "were optimistic by."
         ),
+        "calibration_caveat": (
+            "both ECEs sit far above the calibrated 0.017 headline by "
+            "construction: the weather-NULL regime shifts the score distribution "
+            "the Platt map was fit on. The regime is common to both windows, so "
+            "the RELATIVE comparison is the finding; the absolute values are not "
+            "comparable to the headline."
+        ),
         "model_run": RUN_DIR.name,
     }
     out = REPO / "data/drift_report.json"
