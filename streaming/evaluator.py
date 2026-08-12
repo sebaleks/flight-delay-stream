@@ -178,6 +178,7 @@ def render(report: dict) -> str:
 
 
 def _consume_all(topic: str) -> list[dict]:
+    import datetime as dt
     import io
 
     from confluent_kafka import Consumer, KafkaError, TopicPartition
@@ -211,7 +212,14 @@ def _consume_all(topic: str) -> list[dict]:
         schema_id = int.from_bytes(raw[1:5], "big")  # confluent wire format
         if schema_id not in schemas:
             schemas[schema_id] = parse_schema(json.loads(sr.get_schema(schema_id).schema_str))
-        events.append(schemaless_reader(io.BytesIO(raw[5:]), schemas[schema_id]))
+        event = schemaless_reader(io.BytesIO(raw[5:]), schemas[schema_id])
+        # fastavro decodes timestamp-millis to datetime; the join's event-time
+        # arithmetic (TTL, ordering) is written in epoch ms — normalize here so
+        # evaluate() stays pure over ints
+        for k, v in event.items():
+            if isinstance(v, dt.datetime):
+                event[k] = int(v.timestamp() * 1000)
+        events.append(event)
     consumer.close()
     return events
 
