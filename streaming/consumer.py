@@ -4,10 +4,10 @@
 Consumes Avro departure events against the registry, enriches each to the
 canonical feature frame (ml/features.FEATURES) from the committed serving
 lookups, scores with the frozen XGBoost classifier + Platt calibrator, and
-produces one Avro delay-risk event per departure. The rotation block is the
-H2 STUB: every event gets the swap-shaped all-NULL rotation state
-(in-distribution by construction; 4.12% of training rows have this shape).
-H3 replaces the stub with the per-tail state machine.
+produces one Avro delay-risk event per departure. The rotation block comes
+from the per-tail state machine (streaming/rotation.py): schedule-consistent
+linkages carry the full cascade block, swap-shaped linkages are all-NULL
+(the tail-swap restriction, enforced in-stream).
 
 Enrichment is a port of ml/serving.py's assembly (build_context /
 assemble_features / coerce_feature_frame) with the BigQuery reads replaced by
@@ -49,6 +49,7 @@ from ml import features as f
 from streaming import constants as c
 from streaming.admin import bootstrap, registry_url
 from streaming.producer import partition_for
+from streaming.rotation import Linkage, RotationTracker, basis_for, load_day_leg_counts
 
 REPO = Path(__file__).resolve().parents[1]
 IN_TOPIC = "flight.departures.v1"
@@ -76,9 +77,11 @@ WEATHER_COLUMNS = {
     "origin_had_thunder": "had_thunder",
 }
 
-# the H2 stub: the full swap-shaped NULL rotation block. Everything in the
-# rotation feature set is NULL except origin_dep_density_hour, the schedule
-# aggregate training keeps for every row (ml/features.py block comment).
+# the swap-shaped NULL rotation block: enrich()'s default when no linkage is
+# supplied (H2 stub semantics, kept for the credential-free tests); the live
+# consumer overlays the state machine's real block per event. Everything in
+# the rotation feature set is NULL except origin_dep_density_hour, the
+# schedule aggregate training keeps for every row (ml/features.py comment).
 ROTATION_STUB = (
     "hist_turnaround_band_arr_del15_rate",
     "hist_turnaround_band_avg_arr_delay_minutes",
@@ -115,6 +118,10 @@ class Lookups:
     station_for: dict = field(default_factory=dict)
     # station_id -> (sorted obs ts ms int64 array, feature matrix float64)
     weather: dict = field(default_factory=dict)
+    # band key / position key -> {rate, avg_min, n} (entity_profile's
+    # turnaround_band and rotation_position levels; ml/serving.py:294-299)
+    rot_band: dict = field(default_factory=dict)
+    rot_pos: dict = field(default_factory=dict)
 
 
 def load_lookups() -> Lookups:
@@ -125,6 +132,7 @@ def load_lookups() -> Lookups:
     def _f(v: object) -> float:  # nullable pandas scalars -> plain float
         return math.nan if pd.isna(v) else float(v)
 
+    rotation_levels = {"turnaround_band": L.rot_band, "rotation_position": L.rot_pos}
     for r in ep.itertuples(index=False):
         if r.entity_level in L.hist:
             L.hist[r.entity_level][r.entity_key] = {
@@ -134,6 +142,12 @@ def load_lookups() -> Lookups:
             }
             if r.entity_level == "route" and r.distance is not None and not pd.isna(r.distance):
                 L.route_distance[r.entity_key] = float(r.distance)
+        elif r.entity_level in rotation_levels:
+            rotation_levels[r.entity_level][r.entity_key] = {
+                "rate": _f(r.hist_arr_del15_rate),
+                "avg_min": _f(r.hist_avg_arr_delay_minutes),
+                "n": _f(r.hist_n_flights),
+            }
     missing = [g for g in HIST_GRAINS if not L.hist[g]]
     if missing:
         raise SystemExit(f"entity_profile has no rows for level(s) {missing}")
@@ -239,8 +253,12 @@ def _weather_at(L: Lookups, origin: str, dep_ms: int) -> np.ndarray | None:
     return mat[i]
 
 
-def enrich(ev: dict, L: Lookups) -> tuple[dict, str]:
-    """One departure event -> (51-feature row dict, weather_basis)."""
+def enrich(ev: dict, L: Lookups, rot: Linkage | None = None) -> tuple[dict, str]:
+    """One departure event -> (51-feature row dict, weather_basis).
+
+    rot is the state machine's classified linkage for this event; None means
+    the swap-shaped NULL default (the H2 stub shape, kept for tests that
+    exercise enrichment without rotation state)."""
     route = ev["origin"] + "-" + ev["dest"]
     d: dt.date = ev["flight_date"]
     hour = int(ev["crs_dep_time"][:2])
@@ -291,6 +309,17 @@ def enrich(ev: dict, L: Lookups) -> tuple[dict, str]:
         (ev["origin"], hour, d.isoweekday()), L.typical_density
     )
     row.update(dict.fromkeys(ROTATION_STUB, math.nan))
+    if rot is not None:
+        row.update(rot.features)
+        for key, table, grain in (
+            (rot.band_key, L.rot_band, "turnaround_band"),
+            (rot.position_key, L.rot_pos, "rotation_position"),
+        ):
+            entity = table.get(key, {}) if key is not None else {}
+            # `or nan` matches ml/serving.py:_rotation_features exactly
+            row[f"hist_{grain}_arr_del15_rate"] = float(entity.get("rate") or math.nan)
+            row[f"hist_{grain}_avg_arr_delay_minutes"] = float(entity.get("avg_min") or math.nan)
+            row[f"hist_{grain}_n_flights"] = float(entity.get("n") or math.nan)
     return row, weather_basis
 
 
@@ -336,6 +365,7 @@ def _decode_event(raw: dict) -> dict:
 class Scorer:
     def __init__(self) -> None:
         self.lookups = load_lookups()
+        self.rotation = RotationTracker(load_day_leg_counts())
         self.clf, self.calibrator, self.model_run_id = load_scoring_artifacts()
         self.booster_names = list(self.clf.get_booster().feature_names)
         sr = SchemaRegistryClient({"url": registry_url()})
@@ -363,18 +393,21 @@ class Scorer:
     def score_chunk(self, events: list[dict]) -> None:
         if not events:
             return
-        rows, weather_bases = [], []
+        rows, weather_bases, bases = [], [], []
         for ev in events:
-            row, wb = enrich(ev, self.lookups)
+            # exactly one observe() per event, in poll order — per-tail
+            # ordering within a partition is what makes the state valid
+            rot = self.rotation.observe(ev)
+            row, wb = enrich(ev, self.lookups, rot)
             rows.append(row)
             weather_bases.append(wb)
+            bases.append(basis_for(rot.link_class, ev["is_warmup"]))
         x = build_frame(rows, self.lookups, self.booster_names)
         # raw scores are recall-inflated; the Platt map is strictly monotonic,
         # so calibrated p is a frequency and ranking metrics are unchanged
         p_cal = self.calibrator.transform(self.clf.predict_proba(x)[:, 1])
-        for ev, wb, p in zip(events, weather_bases, p_cal, strict=True):
+        for ev, wb, basis, p in zip(events, weather_bases, bases, p_cal, strict=True):
             p = float(p)
-            basis = "warmup" if ev["is_warmup"] else "swap_null"
             alert = p >= c.ALERT_THRESHOLD
             out = {
                 "flight_date": ev["flight_date"],
@@ -472,7 +505,8 @@ def run(follow: bool, group: str) -> None:
     print(
         f"scored {scorer.scored} events to {OUT_TOPIC} "
         f"(alerts {scorer.alerts} at p>={c.ALERT_THRESHOLD}, bases {scorer.bases}, "
-        f"model {scorer.model_run_id}, rotation=H2 stub)"
+        f"model {scorer.model_run_id}, day-legs lookup misses "
+        f"{scorer.rotation.day_legs_misses})"
     )
 
 
