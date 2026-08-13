@@ -20,6 +20,8 @@
 7. `make test` — the streaming test suite (constants source-pinning, rotation, enrichment, leakage, pressure, evaluator; 52 tests) and lint.
 8. Cleanup: `make down` (equivalent to `docker compose down -v`).
 
+Without running anything: [data/reference_output/](data/reference_output/) holds the committed alert artifact and evaluation report from this exact commit, with a README explaining the fields and the join counters. Because replay is deterministic, `diff`-ing your run against those files is a regression test. Data provenance, ownership, rights and access are in [docs/data_sources.md](docs/data_sources.md); who built what is in [docs/CONTRIBUTIONS.md](docs/CONTRIBUTIONS.md).
+
 ---
 
 # Flight-Delay Lakehouse

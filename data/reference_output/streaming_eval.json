@@ -1,0 +1,42 @@
+{
+  "base_rate": 0.137607,
+  "ece": 0.033393,
+  "headline": {
+    "alerts": 5950,
+    "precision": 0.548908,
+    "recall": 0.177616,
+    "threshold": 0.5
+  },
+  "join": {
+    "counters": {
+      "duplicate_outcome": 0,
+      "duplicate_risk": 0,
+      "excluded_cancelled": 248,
+      "excluded_diverted_no_label": 222,
+      "excluded_warmup": 17780,
+      "orphan_outcome": 1,
+      "scored": 133627,
+      "unmatched_missing_or_late_end_of_stream": 0,
+      "unmatched_missing_or_late_ttl": 1
+    },
+    "outcome_events": 151878,
+    "risk_events": 151878,
+    "ttl_hours": 48.0
+  },
+  "n_scored": 133627,
+  "pr_auc": 0.340218,
+  "sensitivity": {
+    "0.3": {
+      "alerts": 19745,
+      "precision": 0.32469,
+      "recall": 0.348651,
+      "threshold": 0.3
+    },
+    "0.7": {
+      "alerts": 2052,
+      "precision": 0.729532,
+      "recall": 0.081412,
+      "threshold": 0.7
+    }
+  }
+}

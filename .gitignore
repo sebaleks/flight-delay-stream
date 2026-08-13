@@ -62,9 +62,12 @@ mlartifacts/
 *.model
 
 # ---- Streaming runtime state (checkpoints, alert and eval output) ----
+# root-anchored on purpose: these ignore the LIVE output a demo run writes,
+# not the committed reference copies under data/reference_output/ (sanctioned
+# in CLAUDE.md section 5). An unanchored pattern silently swallowed those.
 var/
-alerts.jsonl
-evaluation/
+/alerts.jsonl
+/evaluation/
 
 # ---- OS / editor ----
 .DS_Store

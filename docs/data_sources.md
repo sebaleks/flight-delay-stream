@@ -2,6 +2,22 @@
 
 Everything here was verified on 2026-08-11 unless labeled otherwise. Items that could not be fully verified are labeled as such; nothing unverified is stated as fact.
 
+## Ownership, rights, and access (summary table)
+
+Rights below follow from each publisher's status rather than from a per-file licence stamp. Works produced by United States federal agencies are not subject to domestic copyright (17 U.S.C. section 105), which is why the BTS and NOAA material carries no licence file and needs none. The Iowa State line is labeled as noted because it rests on the archive's published description rather than a licence document retrieved for this project.
+
+| Source | Owner / publisher | Access | Key or account | Rights |
+|---|---|---|---|---|
+| On-Time Reporting Carrier On-Time Performance | Bureau of Transportation Statistics, US Department of Transportation | public HTTP zip download, `transtats.bts.gov/PREZIP/` | none | US federal government work, not subject to domestic copyright; free to use and redistribute, attribution customary |
+| Integrated Surface Database (ISD) hourly observations | NOAA National Centers for Environmental Information | public download; reached this project through the 681 warehouse rather than a fresh fetch | none | US federal government work, same status as above |
+| Archived Terminal Aerodrome Forecasts (TAF) | Iowa Environmental Mesonet, Iowa State University (archiving NOAA/NWS forecast products) | public HTTP, `mesonet.agron.iastate.edu/cgi-bin/request/taf.py` | none, keyless | the underlying forecasts are NWS federal products; the archive is offered publicly and free of charge, with attribution requested (label: from the archive's published description, not a retrieved licence document) |
+| `api.weather.gov`, `aviationweather.gov` | NOAA National Weather Service | public HTTP | none, keyless | US federal government work; identifying User-Agent requested |
+| `confluentinc/cp-kafka`, `confluentinc/cp-schema-registry` 8.3.1 | Confluent, Inc. | Docker Hub | none | vendor container images used unmodified under the publisher's terms; no data rights implicated |
+
+Access for a reviewer is simpler than any row above: none of these endpoints is on the demo path. The replay week, weather, and lookups are committed to the repository, so `make demo` runs with no network fetch, no key, and no account. The only download a reviewer performs is the model artifact from this repository's own GitHub release.
+
+Personal information: none of these sources contains any. The flight records are operational schedule and outcome data at the level of carrier, flight number, tail number, airport, and time. There are no passenger, crew, or individual-person fields anywhere in the committed data, so no de-identification step is required or performed.
+
 ## Replay week (primary demo data)
 
 Source: the existing BigQuery mart (`flight_delays_gold.ml_flight_features`), one week from the 2024-H2 held-out window. The week is chosen by the day-typicality method (`ml/day_typicality.py`, a z-band test that a day is unexceptional), so the demo week is defensibly not cherry-picked. Provenance to disclose wherever the week appears: held out from training by the single dbt cutoff (`train_test_cutoff_date: "2024-07-01"`, `dbt/dbt_project.yml:48`), never trained on, previously scored only in aggregate during 681.

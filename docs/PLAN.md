@@ -311,6 +311,23 @@ The proposal (`docs/PROPOSAL_DRAFT.md`) is submitted and frozen; it is never edi
 | §5 milestone 5: instructor sign-off for cross-course reuse | not recorded anywhere in the repo; obtain and note it here | open, action Seb + Aidan |
 | §2: "README <= 10 steps" | 8 steps, rehearsed on a fresh clone | shipped |
 
+## Final package checklist (audited 2026-08-13 against the 20-point rubric)
+
+| Requirement | Status |
+|---|---|
+| README: setup, one minimum review path, expected output, validation, cleanup | MET, all five in the 8-step quickstart. Caveat: the legacy 681 lakehouse README still occupies the file below a disclosure banner, and its GCP instructions do not apply to reviewers |
+| Data source file: source, owner, link, access, rights, schema, rate limits, replay | MET as of 2026-08-13. Source, link, schema, rate limits and replay were already thorough; owner, rights and access were missing and are now a summary table at the head of `docs/data_sources.md`, with federal public-domain status distinguished from the one label-as-unverified line (IEM) |
+| AI usage file: task, evidence, decisions, verification, limitations | NOT MET. No such file exists. Open action |
+| Code: ingestion or replay, contracts, Kafka processing, output, evaluation | MET |
+| Sample or replay data included, no private information | MET. The committed replay week is flight-level operational data with no passenger, crew, or individual-person field; stated explicitly in `docs/data_sources.md` |
+| Representative output artifact | MET as of 2026-08-13: `data/reference_output/alerts.jsonl`, 7,061 alerts. Required amending the CLAUDE.md section 5 committed-data whitelist, which is recorded there with its reasoning |
+| Validation or evaluation artifact | MET: `data/reference_output/streaming_eval.json`, plus `data/taf_study.json`, `data/taf_harmonization.json`, `data/drift_report.json`, `data/rotation_parity.json` |
+| Cloud resources and reviewer access documented when the core path is cloud-based | NOT APPLICABLE and documented as such: the core path is local, needs no credentials and spends nothing |
+| Individual contributions documented | MET as of 2026-08-13: `docs/CONTRIBUTIONS.md`, as-shipped and separate from the frozen proposal's forward-looking plan |
+| No credentials, .env, caches, or virtual environments | MET, verified by explicit grep over the tracked file list |
+
+One base requirement remains open: the AI usage file. Bonus evidence cannot substitute for it.
+
 ## Non-goals
 
 Everything the former Phase 6 cut, now with its confirmation recorded: no CatBoost re-run (the one-time held-out confirmation is spent: 0.7362/0.4623 vs 0.7389/0.4652, not adopted), no extended-split retraining, no pre-COVID or COVID data, no LightGBM, no monotonic constraints, no P(swap | cancellation) analysis (the in-stream cancellation-pressure feature captures the mechanism). Also: no third-party schedule API, no dbt/Dagster/BigQuery in the runtime path, no medallion rebuild, no Tier 2 or Tier 3 live modes, no Streamlit UI.
