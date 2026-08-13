@@ -13,7 +13,7 @@ compares the emitted rotation features:
    batch twin).
 
 Prints link-class shares (class c split by trigger), a per-column mismatch
-table for both comparisons, and writes evaluation/rotation_parity.json.
+table for both comparisons, and writes data/rotation_parity.json (committed; evaluation/ is git-ignored).
 
     uv run --extra kafka --extra ml python scripts/verify_rotation_parity.py
 """
@@ -190,7 +190,7 @@ def main() -> None:
         "mart_residue_rows": residue_rows,
         "mart_residue_pct": round(residue_pct, 4),
     }
-    path = REPO / "evaluation/rotation_parity.json"
+    path = REPO / "data/rotation_parity.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(out, sort_keys=True, indent=2) + "\n")
     print(f"\nwrote {path}")

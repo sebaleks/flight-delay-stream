@@ -316,7 +316,9 @@ def main() -> None:
           f"{'TRIGGERED' if triggered else 'not triggered'}")
     print(f"  {report['trigger']['verdict']}")
 
-    path = REPO / "evaluation/taf_study.json"
+    # data/, not evaluation/: evaluation/ is git-ignored runtime output, and
+    # this is a committed finding (the drift_report.json precedent)
+    path = REPO / "data/taf_study.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
     print(f"wrote {path}")

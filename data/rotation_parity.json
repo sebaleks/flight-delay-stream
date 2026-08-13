@@ -1,0 +1,53 @@
+{
+  "batch_twin_feature_mismatches": {
+    "has_inbound_leg": 145,
+    "inbound_crs_elapsed_min": 134,
+    "inbound_distance": 134,
+    "is_tight_turnaround": 144,
+    "legs_today": 144,
+    "rotation_position": 144,
+    "sched_turnaround_min": 134,
+    "sched_turnaround_slack_min": 134
+  },
+  "batch_twin_key_mismatches": {
+    "link_class": 145,
+    "rotation_position_key": 144,
+    "turnaround_band_key": 145
+  },
+  "class_c_triggers": {
+    "negative_gap": 1519,
+    "schedule_overlap": 1440,
+    "station_discontinuity": 1294,
+    "unknown_tail": 88
+  },
+  "link_class_shares_pct": {
+    "a": 92.488,
+    "b": 4.275,
+    "c": 3.237
+  },
+  "mart_feature_mismatches": {
+    "has_inbound_leg": 277,
+    "inbound_crs_elapsed_min": 117,
+    "inbound_distance": 117,
+    "is_tight_turnaround": 277,
+    "legs_today": 277,
+    "rotation_position": 277,
+    "sched_turnaround_min": 117,
+    "sched_turnaround_slack_min": 117
+  },
+  "mart_hist_mismatches": {
+    "hist_rotation_position_arr_del15_rate": 277,
+    "hist_rotation_position_avg_arr_delay_minutes": 277,
+    "hist_rotation_position_n_flights": 277,
+    "hist_turnaround_band_arr_del15_rate": 277,
+    "hist_turnaround_band_avg_arr_delay_minutes": 277,
+    "hist_turnaround_band_n_flights": 277
+  },
+  "mart_residue_pct": 0.2073,
+  "mart_residue_rows": 277,
+  "mart_rows_compared": 133628,
+  "rows_streamed": 151878,
+  "seam_tails": 140,
+  "twin_class_diff_tails": 120,
+  "twin_class_diff_tails_off_seam": 0
+}

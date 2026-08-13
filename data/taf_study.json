@@ -1,0 +1,73 @@
+{
+  "bins": {
+    "0-3h": {
+      "observed": {
+        "ece": 0.033666,
+        "n": 97874,
+        "pr_auc": 0.350432,
+        "roc_auc": 0.71434
+      },
+      "pr_auc_degradation": 0.042973,
+      "taf": {
+        "ece": 0.158939,
+        "n": 97874,
+        "pr_auc": 0.307459,
+        "roc_auc": 0.692634
+      }
+    },
+    "12-30h": {
+      "observed": {
+        "ece": 0.089498,
+        "n": 1,
+        "pr_auc": null,
+        "roc_auc": null
+      },
+      "pr_auc_degradation": null,
+      "taf": {
+        "ece": 0.185703,
+        "n": 1,
+        "pr_auc": null,
+        "roc_auc": null
+      }
+    },
+    "3-12h": {
+      "observed": {
+        "ece": 0.032009,
+        "n": 30611,
+        "pr_auc": 0.32397,
+        "roc_auc": 0.69862
+      },
+      "pr_auc_degradation": 0.022644,
+      "taf": {
+        "ece": 0.142831,
+        "n": 30611,
+        "pr_auc": 0.301326,
+        "roc_auc": 0.687688
+      }
+    }
+  },
+  "coverage_pct": 96.152,
+  "labeled_departures": 133628,
+  "model_run_id": "20260730_145241",
+  "taf_covered": 128486,
+  "taf_uncovered_null_path": 5142,
+  "trigger": {
+    "short_bin_pr_auc_degradation": 0.042973,
+    "threshold": 0.01,
+    "verdict": "representation mismatch \u2014 harmonize first, never retrain on this alone"
+  },
+  "uncovered": {
+    "observed": {
+      "ece": 0.052557,
+      "n": 5142,
+      "pr_auc": 0.241575,
+      "roc_auc": 0.664826
+    },
+    "taf": {
+      "ece": 0.090944,
+      "n": 5142,
+      "pr_auc": 0.247864,
+      "roc_auc": 0.661474
+    }
+  }
+}

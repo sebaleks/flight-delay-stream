@@ -84,7 +84,9 @@ Everything here launches in background before any design work, and none of it is
 
 Seb's half is complete through Sync 2. Done and gate-passed: constants module + source-pinning tests; three topics and three BACKWARD contracts registered; replay producer (byte-identical same-seed runs, 151,878 events); outcomes producer at actual-arrival event time; the TTL-bounded evaluator with nine conservation-tested counters; Makefile demo/eval/test rehearsed clean on a fresh clone (which caught and fixed the schema-registry healthcheck); the model-artifact release with the two-phase fetch script; the drift measurement (record above); handoff prompts audited current.
 
-Genuinely remaining on Seb's side: (1) the Sync 2 integration check when Aidan's consumer first fills `flight.delay_risk.v1`, plus refreshing the README quickstart's expected-output step from orphan_outcome to the live headline; (2) the day 2 17:00 shipped-versus-claimed audit that finalizes the deviations ledger above; (3) confirming the release's phase 2 assets (regressor, logreg) finished uploading so `scripts/fetch_artifacts.sh` phase 2 works; (4) the final clean-machine dress rehearsal with the full consumer path. Everything else in flight belongs to Aidan's H1-H5.
+Sync 2 status (verified 2026-08-13): Aidan's H1-H5 are all merged and every gate re-verified end to end on Seb's machine — 48 tests green; full demo scores 151,878 with the consumer exiting at EOF; evaluator headline live (precision 0.549 / recall 0.178 at 0.5 on 133,627 scored, counters conserving exactly, one genuinely >48h-late outcome visible as the TTL + orphan pair); H3 parity gate passes (zero off-seam divergence vs the batch twin; 0.207% mart residue = cold-start + the 140 seam tails from the producer's local-time ordering); the TAF study trigger fired (harmonize-first). Release phase 2 assets confirmed. README expected-output refreshed.
+
+Genuinely remaining: (1) the day 2 17:00 shipped-versus-claimed audit that finalizes the ledger above (largely pre-filled now); (2) the final clean-machine dress rehearsal with the full consumer path; (3) a team decision on the TAF harmonization follow-up the triggered verdict calls for (a feature change, governed by the adoption rule); (4) the `pressure_late_arrivals` / `pressure_cancellations` fields on delay_risk still emit null — kickoff scope carried them as first-class; decide whether to build them or record the cut here.
 
 ## The two-day schedule
 
@@ -302,7 +304,7 @@ The proposal (`docs/PROPOSAL_DRAFT.md`) is submitted and frozen; it is never edi
 |---|---|---|
 | Milestone 5: Confluent Cloud screenshot | item closed by Seb 2026-08-11; will not ship | closed, on record |
 | Milestone 5: drift check | DONE 2026-08-11, ahead of the TAF study (it was unblocked and needed nothing from Aidan); `data/drift_report.json` | shipped early |
-| Milestone 4: TAF skill-by-horizon study | pending the day 2 go/no-go (13:00); H5 | open |
+| Milestone 4: TAF skill-by-horizon study | DONE (Aidan's H5, verified 2026-08-13): 0-3h ΔPR-AUC 0.0430 exceeds the 0.010 trigger — representation mismatch, harmonize-first verdict, no retrain; `data/taf_study.json`. Structural finding: scoring at T with latest-issuance TAF selection leaves the 12-30h bin empty (n=1), so the long-horizon cost is unmeasurable in this design and would need earlier scoring lead times | shipped |
 
 ## Non-goals
 
