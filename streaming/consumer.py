@@ -41,7 +41,7 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 import xgboost as xgb
-from confluent_kafka import Consumer, KafkaError, Producer
+from confluent_kafka import Consumer, KafkaError, Producer, TopicPartition
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroDeserializer, AvroSerializer
 from confluent_kafka.serialization import MessageField, SerializationContext, StringSerializer
@@ -568,10 +568,24 @@ def run(follow: bool, group: str) -> None:
         }
     )
     assigned: set[tuple[str, int]] = set()
-    consumer.subscribe(
-        [IN_TOPIC],
-        on_assign=lambda _c, parts: assigned.update((p.topic, p.partition) for p in parts),
-    )
+    if follow:
+        # live mode: group subscribe, normal rebalance semantics
+        consumer.subscribe(
+            [IN_TOPIC],
+            on_assign=lambda _c, parts: assigned.update((p.topic, p.partition) for p in parts),
+        )
+    else:
+        # batch mode: explicit assignment from offset 0, like every other
+        # batch consumer in this repo. The dress rehearsal caught the
+        # subscribe() path scoring 0 on a seconds-old cluster (first-ever
+        # group join racing fetch-position resolution); a demo run recreates
+        # the risk topic anyway, so a deterministic full read is the correct
+        # semantic and there is no race to lose. Offset commits remain as
+        # observability; they are not needed for correctness here.
+        from streaming.admin import PARTITIONS
+
+        consumer.assign([TopicPartition(IN_TOPIC, p, 0) for p in range(PARTITIONS)])
+        assigned.update((IN_TOPIC, p) for p in range(PARTITIONS))
     at_eof: set[tuple[str, int]] = set()
     buffer: list[dict] = []
     uncommitted = 0
