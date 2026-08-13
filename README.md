@@ -14,7 +14,7 @@
 1. Prerequisites: Docker Desktop running, [uv](https://docs.astral.sh/uv/) installed, `git`.
 2. `git clone https://github.com/sebaleks/flight-delay-stream && cd flight-delay-stream`
 3. `uv sync --extra kafka --extra ml --extra serve --extra ingestion`
-4. Model artifacts (the consumer scores with them): `bash scripts/fetch_artifacts.sh` downloads the frozen run into `ml/artifacts/` from the GitHub release; phase 1 (~290 MB) suffices.
+4. Model artifacts (the consumer scores with them): `bash scripts/fetch_artifacts.sh` downloads the frozen run into `ml/artifacts/` from the GitHub release (needs `gh` logged in; phase 1, ~290 MB, suffices).
 5. `make demo` — brings up Kafka + Schema Registry (KRaft, Confluent 8.3.1), registers the Avro contracts, replays the committed week (2024-09-02 to 2024-09-08 plus a warm-up day, 151,878 departures and 151,878 outcomes at event time), scores every departure through the consumer, then prints the outcome-join evaluation.
 6. Expected output: both producers report `produced 151878 events`; the consumer reports `scored 151878 events ... (alerts 7061 at p>=0.5)`; the evaluation prints the headline `precision 0.548908 recall 0.177616 (5950 alerts, 133627 scored)` above the nine join counters (warm-up day and cancellations excluded into their own counters, nothing silently dropped). Two runs produce byte-identical reports and alert files.
 7. `make test` — the streaming test suite (constants source-pinning, rotation, enrichment, leakage, pressure, evaluator; 52 tests) and lint.

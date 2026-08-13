@@ -13,6 +13,10 @@
 set -euo pipefail
 RUN=20260730_145241
 TAG="model-${RUN}"
+# --repo pinned explicitly: a clone made from a local path (or any non-GitHub
+# remote) gives gh nothing to infer the repository from — the dress rehearsal
+# caught exactly that failing silently
+REPO_SLUG="sebaleks/flight-delay-stream"
 DIR="$(cd "$(dirname "$0")/.." && pwd)/ml/artifacts/${RUN}"
 mkdir -p "${DIR}"
 
@@ -20,7 +24,8 @@ fetch() {
     if [ -s "${DIR}/$1" ]; then
         echo "  $1 already present"
     else
-        gh release download "${TAG}" --pattern "$1" --dir "${DIR}" --clobber
+        gh release download "${TAG}" --repo "${REPO_SLUG}" --pattern "$1" \
+            --dir "${DIR}" --clobber
         echo "  $1 fetched"
     fi
 }
