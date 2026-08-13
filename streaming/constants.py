@@ -112,6 +112,17 @@ HIST_SMOOTHING_PRIOR_STRENGTH = 50
 # never tuned on the replay week).
 ALERT_THRESHOLD = 0.5
 
+# --- Origin pressure --------------------------------------------------------
+
+# Trailing event-time window for the in-stream origin-pressure counts carried
+# on every delay_risk event (kickoff scope, first-class): late arrivals INTO
+# the origin and cancellations of departures FROM it whose truth became known
+# inside [T - window, T). Knowable at T by construction (truth_ts < T), no
+# tail linkage involved. 3 hours mirrors WEATHER_STALENESS_HOURS: the same
+# judgment about how stale pre-departure context may be. Ops context on the
+# event; never an input to the frozen model.
+PRESSURE_WINDOW_HOURS = 3
+
 # --- Risk banding -----------------------------------------------------------
 
 # delay_risk.risk_band is the calibrated probability's decile bucket, rendered

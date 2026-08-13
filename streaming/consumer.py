@@ -49,6 +49,7 @@ from confluent_kafka.serialization import MessageField, SerializationContext, St
 from ml import features as f
 from streaming import constants as c
 from streaming.admin import bootstrap, registry_url
+from streaming.evaluator import _consume_all
 from streaming.producer import partition_for
 from streaming.rotation import Linkage, RotationTracker, basis_for, load_day_leg_counts
 
@@ -106,6 +107,53 @@ HIST_SUFFIXES = ("arr_del15_rate", "avg_arr_delay_minutes", "n_flights")
 
 class SchemaMismatchError(RuntimeError):
     """The assembled features do not match the model's stored schema."""
+
+
+OUTCOMES_TOPIC = "flight.outcomes.v1"
+
+
+class PressureIndex:
+    """Origin-pressure counts from the outcomes stream (kickoff scope,
+    first-class): per scored departure, how many LATE ARRIVALS landed at its
+    origin and how many DEPARTURES FROM it were cancelled, with truth known
+    (truth_ts_utc) inside the trailing [T - PRESSURE_WINDOW_HOURS, T) window.
+    Strictly truth_ts < T, so the counts are knowable at T by construction.
+
+    Batch construction: the replay's outcomes topic is consumed to EOF once
+    at startup and indexed per airport; a live deployment would maintain the
+    same window incrementally from the stream. Cancellation truth_ts is the
+    scheduled arrival (the outcomes producer's disclosed approximation), a
+    conservative-late stand-in for when the cancellation was announced.
+    """
+
+    def __init__(self, outcome_events: list[dict]) -> None:
+        late: dict[str, list[int]] = {}
+        cancelled: dict[str, list[int]] = {}
+        for e in outcome_events:
+            ts = int(e["truth_ts_utc"])
+            if e["cancelled"]:
+                cancelled.setdefault(e["origin"], []).append(ts)
+            elif e["arr_del15"]:
+                late.setdefault(e["dest"], []).append(ts)
+        self._late = {k: np.array(sorted(v), dtype="int64") for k, v in late.items()}
+        self._cancelled = {
+            k: np.array(sorted(v), dtype="int64") for k, v in cancelled.items()
+        }
+
+    @staticmethod
+    def _count(arr: np.ndarray | None, lo: int, hi: int) -> int:
+        if arr is None:
+            return 0
+        # [lo, hi): left-inclusive, right-exclusive (truth at exactly T is
+        # simultaneous with scoring, not before it)
+        return int(np.searchsorted(arr, hi, side="left") - np.searchsorted(arr, lo, side="left"))
+
+    def counts(self, origin: str, t_ms: int) -> tuple[int, int]:
+        lo = t_ms - c.PRESSURE_WINDOW_HOURS * 3_600_000
+        return (
+            self._count(self._late.get(origin), lo, t_ms),
+            self._count(self._cancelled.get(origin), lo, t_ms),
+        )
 
 
 @dataclass
@@ -364,9 +412,12 @@ def _decode_event(raw: dict) -> dict:
 
 
 class Scorer:
-    def __init__(self, alerts_path: Path | None = None) -> None:
+    def __init__(
+        self, alerts_path: Path | None = None, pressure: PressureIndex | None = None
+    ) -> None:
         self.lookups = load_lookups()
         self.rotation = RotationTracker(load_day_leg_counts())
+        self.pressure = pressure or PressureIndex([])
         self.clf, self.calibrator, self.model_run_id = load_scoring_artifacts()
         # the run's whole artifact: truncate on start so two identical replay
         # runs produce byte-identical files (docs/schemas.md contract 4)
@@ -460,6 +511,7 @@ class Scorer:
             alert = p >= c.ALERT_THRESHOLD
             if alert:
                 self._write_alert(ev, p)
+            late, canc = self.pressure.counts(ev["origin"], ev["crs_dep_ts_ms"])
             out = {
                 "flight_date": ev["flight_date"],
                 "carrier": ev["carrier"],
@@ -477,8 +529,8 @@ class Scorer:
                 "rotation_state_basis": basis,
                 "weather_basis": wb,
                 "taf_horizon_bin": None,
-                "pressure_late_arrivals": None,
-                "pressure_cancellations": None,
+                "pressure_late_arrivals": late,
+                "pressure_cancellations": canc,
             }
             key = ev["tail_number"] or c.NULL_TAIL_SENTINEL_KEY
             self.producer.produce(
@@ -503,7 +555,9 @@ class Scorer:
 
 
 def run(follow: bool, group: str) -> None:
-    scorer = Scorer()
+    # the pressure window reads the outcomes topic once up front (batch
+    # semantics; a live deployment would maintain it incrementally)
+    scorer = Scorer(pressure=PressureIndex(_consume_all(OUTCOMES_TOPIC)))
     consumer = Consumer(
         {
             "bootstrap.servers": bootstrap(),

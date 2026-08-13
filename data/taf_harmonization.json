@@ -1,0 +1,96 @@
+{
+  "bins": {
+    "0-3h": {
+      "forecast_share_pr_auc": 0.004797,
+      "harmonized": {
+        "ece": 0.154636,
+        "n": 97874,
+        "pr_auc": 0.312256,
+        "roc_auc": 0.697117
+      },
+      "observed": {
+        "ece": 0.033666,
+        "n": 97874,
+        "pr_auc": 0.350432,
+        "roc_auc": 0.71434
+      },
+      "representation_share_pr_auc": 0.038176,
+      "taf": {
+        "ece": 0.158939,
+        "n": 97874,
+        "pr_auc": 0.307459,
+        "roc_auc": 0.692634
+      }
+    },
+    "12-30h": {
+      "forecast_share_pr_auc": null,
+      "harmonized": {
+        "ece": 0.188008,
+        "n": 1,
+        "pr_auc": null,
+        "roc_auc": null
+      },
+      "observed": {
+        "ece": 0.089498,
+        "n": 1,
+        "pr_auc": null,
+        "roc_auc": null
+      },
+      "representation_share_pr_auc": null,
+      "taf": {
+        "ece": 0.185703,
+        "n": 1,
+        "pr_auc": null,
+        "roc_auc": null
+      }
+    },
+    "3-12h": {
+      "forecast_share_pr_auc": 0.005956,
+      "harmonized": {
+        "ece": 0.134951,
+        "n": 30611,
+        "pr_auc": 0.307282,
+        "roc_auc": 0.689197
+      },
+      "observed": {
+        "ece": 0.032009,
+        "n": 30611,
+        "pr_auc": 0.32397,
+        "roc_auc": 0.69862
+      },
+      "representation_share_pr_auc": 0.016688,
+      "taf": {
+        "ece": 0.142831,
+        "n": 30611,
+        "pr_auc": 0.301326,
+        "roc_auc": 0.687688
+      }
+    }
+  },
+  "flight_rules_agreement": {
+    "confusion_offdiagonal": {
+      "IFR->LIFR": 39,
+      "IFR->MVFR": 160,
+      "IFR->VFR": 834,
+      "LIFR->IFR": 138,
+      "LIFR->MVFR": 36,
+      "LIFR->VFR": 340,
+      "MVFR->IFR": 66,
+      "MVFR->LIFR": 3,
+      "MVFR->VFR": 606,
+      "VFR->IFR": 258,
+      "VFR->LIFR": 30,
+      "VFR->MVFR": 771
+    },
+    "n": 144877,
+    "rate": 0.977353
+  },
+  "model_run_id": "20260730_145241",
+  "taf_vis_censor": 6.01,
+  "verdict": {
+    "conclusion": "representation mismatch confirmed at the source: the harmonized-feature retrain (VFR/MVFR/IFR/LIFR from both sides) is justified future work under the adoption rule \u2014 validation selects, test confirms once. Nothing here fits or selects.",
+    "representation_dominates": true,
+    "short_bin_forecast_share": 0.004797,
+    "short_bin_representation_share": 0.038176
+  }
+}

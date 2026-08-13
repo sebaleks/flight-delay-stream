@@ -101,7 +101,7 @@ One event per scored departure, defined at T = scheduled departure. `scored_at_t
 }
 ```
 
-Note on the pressure fields: they are computed in-stream from events strictly before T (knowable at T, no tail linkage required) and carried as ops context beside the score. They are NOT inputs to the frozen 2024-06-30 model, whose 51-feature schema is hard-asserted before every prediction; they become model inputs only under a future retrain governed by the adoption rule (validation selects, test confirms once).
+Note on the pressure fields: they are computed in-stream from events strictly before T (knowable at T, no tail linkage required) and carried as ops context beside the score. Implemented semantics (streaming/consumer.PressureIndex, window from `streaming/constants.PRESSURE_WINDOW_HOURS` = 3): late arrivals are outcomes with `arr_del15` true whose DEST is this origin; cancellations are cancelled outcomes whose ORIGIN is this origin; an outcome counts when its `truth_ts_utc` lies in `[T - window, T)` (left-inclusive, right-exclusive: truth at exactly T is simultaneous, not before). Cancellation truth time is the scheduled arrival, the outcomes producer's disclosed approximation. They are NOT inputs to the frozen 2024-06-30 model, whose 51-feature schema is hard-asserted before every prediction; they become model inputs only under a future retrain governed by the adoption rule (validation selects, test confirms once).
 
 ## 4. Alert artifact (`alerts.jsonl`; one JSON object per line)
 
