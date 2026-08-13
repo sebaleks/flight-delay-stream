@@ -73,7 +73,7 @@ docs_legacy/    inherited 681 material: reference and provenance only, never pol
 ```
 
 - `docs/` holds live policy; `docs_legacy/` holds inherited 681 material, reference only, never instructions. No third documentation location. `docs/leakage_discipline.md` is live policy (rules 7 and 12 govern current work).
-- Committed data is the sanctioned exception to the old "data never lives in git" rule, limited to: the replay week, the outcome sample, the serving lookups, golden vectors, the seeds, and the reference output pair in `data/reference_output/` (the alert artifact and the evaluation report). The model artifact ships as a release asset if it exceeds comfortable repo size.
+- Committed data is the sanctioned exception to the old "data never lives in git" rule, limited to: the replay week, the outcome sample, the serving lookups, golden vectors, the seeds, and the reference output in `data/reference_output/` (the alert artifact, the evaluation report, and the figures rendered from them by `scripts/plot_evaluation.py`). The model artifact ships as a release asset if it exceeds comfortable repo size.
 - The reference output pair was added to that list on 2026-08-13, deliberately: the final-package rubric requires a representative output artifact and a validation artifact to be present in the repository, and a reviewer should not have to run Docker to see what the system emits. It is admissible only because replay is deterministic, which makes the committed copies a regression reference rather than a stale snapshot. Live runtime output (`alerts.jsonl`, `evaluation/`) stays git-ignored; regenerating it must leave the reference copies byte-identical, and a diff between them is a real test failure.
 
 ## 6. Tooling and conventions

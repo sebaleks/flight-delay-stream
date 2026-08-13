@@ -40,6 +40,31 @@ diverted without a label, 1 orphan outcome, 1 past the 48-hour TTL. Nothing is
 silently dropped, and the counters are conservation-tested in
 `streaming/test_evaluator.py`.
 
+## `figures/`
+
+Rendered from the two files above by `scripts/plot_evaluation.py`, which
+recomputes nothing: plotting a number the evaluator did not produce would put
+a second, unversioned source of truth in the report.
+
+`threshold_sweep.png` answers what moving the alert threshold costs and buys.
+Precision and recall across all 19 sweep points, the three sampled operating
+points labelled, and the base rate drawn as a reference, because 0.549
+precision only means something against the 0.138 a random alerter would get.
+
+`weather_gap.png` decomposes the forecast-substitution gap in the 0-3 hour
+horizon. It is drawn as a descent line rather than bars on purpose: the whole
+finding is a 0.043 difference, and a bar's length read off a truncated
+baseline is the standard way to exaggerate a small gap. Position encoding
+shows the same numbers honestly on a zoomed axis.
+
+`by_day.png` shows the operating point holding across all seven scored days,
+precision between 0.492 and 0.689, with each day's own base rate beneath. It
+is the check that the week aggregate is not hiding one bad day.
+
+The palette is the deck's slate re-stepped to clear the chroma floor, paired
+with its signal orange, validated for colour-vision-deficiency separation
+(worst adjacent pair dE 19.6 protan) rather than chosen by eye.
+
 ## Reproducing
 
 ```bash

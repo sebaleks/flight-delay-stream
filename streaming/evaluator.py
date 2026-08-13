@@ -34,6 +34,10 @@ from streaming.constants import ALERT_THRESHOLD
 REPO = Path(__file__).resolve().parents[1]
 IDENTITY = ("flight_date", "carrier", "flight_number", "origin", "dest", "crs_dep_time")
 SENSITIVITY_THRESHOLDS = (0.3, 0.7)
+# the full operating-point curve: precision and recall at every threshold a
+# user could plausibly set. Three sampled points cannot show that the choice
+# of threshold is a business decision; the sweep can.
+SWEEP_THRESHOLDS = tuple(round(0.05 * i, 2) for i in range(1, 20))  # 0.05 .. 0.95
 DEFAULT_TTL_HOURS = 48.0
 ECE_BINS = 10
 
@@ -78,6 +82,7 @@ def evaluate(
         "duplicate_outcome": 0,
     }
     pairs: list[tuple[float, bool]] = []  # (delay_probability, arr_del15)
+    dated: list[tuple[str, float, bool]] = []  # the same, carrying flight_date
 
     def settle(risk: dict, outcome: dict) -> None:
         if risk.get("rotation_state_basis") == "warmup":
@@ -88,7 +93,9 @@ def evaluate(
             counters["excluded_diverted_no_label"] += 1
         else:
             counters["scored"] += 1
-            pairs.append((float(risk["delay_probability"]), bool(outcome["arr_del15"])))
+            p, y = float(risk["delay_probability"]), bool(outcome["arr_del15"])
+            pairs.append((p, y))
+            dated.append((risk["flight_date"], p, y))
 
     for kind, ts, ident, event in merged:
         # event-time TTL eviction before every step
@@ -125,6 +132,8 @@ def evaluate(
         },
         "headline": _threshold_metrics(pairs, ALERT_THRESHOLD),
         "sensitivity": {str(t): _threshold_metrics(pairs, t) for t in SENSITIVITY_THRESHOLDS},
+        "sweep": [_threshold_metrics(pairs, t) for t in SWEEP_THRESHOLDS],
+        "by_day": _by_day(dated, ALERT_THRESHOLD),
         "pr_auc": _pr_auc(pairs),
         "ece": _ece(pairs),
         "n_scored": len(pairs),
@@ -144,6 +153,29 @@ def _threshold_metrics(pairs: list[tuple[float, bool]], threshold: float) -> dic
         "alerts": tp + fp,
         "precision": round(tp / (tp + fp), 6) if tp + fp else None,
         "recall": round(tp / (tp + fn), 6) if tp + fn else None,
+    }
+
+
+def _by_day(dated: list[tuple[str, float, bool]], threshold: float) -> dict:
+    """Per-flight-date metrics at the headline threshold.
+
+    The week aggregate can hide a single bad day. This shows whether the
+    operating point holds across all seven, and it is what a per-day chart
+    in the report reads from. The warm-up day never appears: it is excluded
+    upstream in settle() before a pair is ever recorded.
+    """
+    days: dict[str, list[tuple[float, bool]]] = {}
+    for d, p, y in dated:
+        # the Avro date logical type decodes to datetime.date, which is not a
+        # JSON key; normalize at the boundary so the report stays serializable
+        days.setdefault(d.isoformat() if hasattr(d, "isoformat") else str(d), []).append((p, y))
+    return {
+        d: {
+            **_threshold_metrics(v, threshold),
+            "n_scored": len(v),
+            "base_rate": round(sum(1 for _, y in v if y) / len(v), 6),
+        }
+        for d, v in sorted(days.items())
     }
 
 

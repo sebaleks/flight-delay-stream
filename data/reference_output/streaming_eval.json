@@ -1,5 +1,63 @@
 {
   "base_rate": 0.137607,
+  "by_day": {
+    "2024-09-02": {
+      "alerts": 688,
+      "base_rate": 0.182328,
+      "n_scored": 20507,
+      "precision": 0.688953,
+      "recall": 0.126772,
+      "threshold": 0.5
+    },
+    "2024-09-03": {
+      "alerts": 732,
+      "base_rate": 0.109207,
+      "n_scored": 18204,
+      "precision": 0.509563,
+      "recall": 0.187626,
+      "threshold": 0.5
+    },
+    "2024-09-04": {
+      "alerts": 572,
+      "base_rate": 0.121076,
+      "n_scored": 17584,
+      "precision": 0.56993,
+      "recall": 0.153124,
+      "threshold": 0.5
+    },
+    "2024-09-05": {
+      "alerts": 1009,
+      "base_rate": 0.130952,
+      "n_scored": 19824,
+      "precision": 0.491576,
+      "recall": 0.191063,
+      "threshold": 0.5
+    },
+    "2024-09-06": {
+      "alerts": 1132,
+      "base_rate": 0.135236,
+      "n_scored": 20039,
+      "precision": 0.492933,
+      "recall": 0.205904,
+      "threshold": 0.5
+    },
+    "2024-09-07": {
+      "alerts": 592,
+      "base_rate": 0.106627,
+      "n_scored": 16628,
+      "precision": 0.540541,
+      "recall": 0.180485,
+      "threshold": 0.5
+    },
+    "2024-09-08": {
+      "alerts": 1225,
+      "base_rate": 0.165683,
+      "n_scored": 20841,
+      "precision": 0.586939,
+      "recall": 0.208225,
+      "threshold": 0.5
+    }
+  },
   "ece": 0.033393,
   "headline": {
     "alerts": 5950,
@@ -38,5 +96,121 @@
       "recall": 0.081412,
       "threshold": 0.7
     }
-  }
+  },
+  "sweep": [
+    {
+      "alerts": 118129,
+      "precision": 0.150412,
+      "recall": 0.966282,
+      "threshold": 0.05
+    },
+    {
+      "alerts": 79332,
+      "precision": 0.188549,
+      "recall": 0.813465,
+      "threshold": 0.1
+    },
+    {
+      "alerts": 53445,
+      "precision": 0.22612,
+      "recall": 0.657222,
+      "threshold": 0.15
+    },
+    {
+      "alerts": 37566,
+      "precision": 0.258958,
+      "recall": 0.529041,
+      "threshold": 0.2
+    },
+    {
+      "alerts": 27000,
+      "precision": 0.29063,
+      "recall": 0.426746,
+      "threshold": 0.25
+    },
+    {
+      "alerts": 19745,
+      "precision": 0.32469,
+      "recall": 0.348651,
+      "threshold": 0.3
+    },
+    {
+      "alerts": 14479,
+      "precision": 0.365495,
+      "recall": 0.287796,
+      "threshold": 0.35
+    },
+    {
+      "alerts": 10583,
+      "precision": 0.423604,
+      "recall": 0.2438,
+      "threshold": 0.4
+    },
+    {
+      "alerts": 7865,
+      "precision": 0.48328,
+      "recall": 0.206711,
+      "threshold": 0.45
+    },
+    {
+      "alerts": 5950,
+      "precision": 0.548908,
+      "recall": 0.177616,
+      "threshold": 0.5
+    },
+    {
+      "alerts": 4676,
+      "precision": 0.603721,
+      "recall": 0.153524,
+      "threshold": 0.55
+    },
+    {
+      "alerts": 3685,
+      "precision": 0.660516,
+      "recall": 0.132369,
+      "threshold": 0.6
+    },
+    {
+      "alerts": 2868,
+      "precision": 0.701883,
+      "recall": 0.109474,
+      "threshold": 0.65
+    },
+    {
+      "alerts": 2052,
+      "precision": 0.729532,
+      "recall": 0.081412,
+      "threshold": 0.7
+    },
+    {
+      "alerts": 1243,
+      "precision": 0.751408,
+      "recall": 0.050794,
+      "threshold": 0.75
+    },
+    {
+      "alerts": 603,
+      "precision": 0.731343,
+      "recall": 0.023983,
+      "threshold": 0.8
+    },
+    {
+      "alerts": 297,
+      "precision": 0.757576,
+      "recall": 0.012236,
+      "threshold": 0.85
+    },
+    {
+      "alerts": 141,
+      "precision": 0.751773,
+      "recall": 0.005765,
+      "threshold": 0.9
+    },
+    {
+      "alerts": 21,
+      "precision": 0.761905,
+      "recall": 0.00087,
+      "threshold": 0.95
+    }
+  ]
 }
