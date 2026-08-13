@@ -129,6 +129,12 @@ def run(seed: int, limit: int | None, speed: float, resume: bool) -> int:
         "enable.idempotence": True,
         "compression.type": "none",
     })
+    delivery_errors: list[str] = []
+
+    def on_delivery(err, _msg) -> None:
+        # without a callback, failed deliveries vanish and "produced N" lies
+        if err is not None:
+            delivery_errors.append(str(err))
 
     ctx = SerializationContext(TOPIC, MessageField.VALUE)
     kctx = SerializationContext(TOPIC, MessageField.KEY)
@@ -146,13 +152,18 @@ def run(seed: int, limit: int | None, speed: float, resume: bool) -> int:
             value=serialize(event, ctx),
             partition=partition_for(key),
             timestamp=event["crs_dep_ts_utc"],
+            on_delivery=on_delivery,
         )
+        producer.poll(0)
         produced += 1
         if produced % CHECKPOINT_EVERY == 0:
             producer.flush()
             CHECKPOINT.parent.mkdir(parents=True, exist_ok=True)
             CHECKPOINT.write_text(json.dumps({"next_index": i + 1, "seed": seed}))
     producer.flush()
+    if delivery_errors:
+        raise SystemExit(f"delivery failed for {len(delivery_errors)} events: "
+                         f"{delivery_errors[:3]}")
     CHECKPOINT.parent.mkdir(parents=True, exist_ok=True)
     CHECKPOINT.write_text(json.dumps({"next_index": start_index + produced, "seed": seed}))
     print(f"produced {produced} events to {TOPIC} "

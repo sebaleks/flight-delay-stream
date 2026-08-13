@@ -61,6 +61,9 @@ IN_SCHEMA = (Path(__file__).resolve().parent / "schemas/departure.avsc").read_te
 OUT_SCHEMA = (Path(__file__).resolve().parent / "schemas/delay_risk.avsc").read_text()
 ARTIFACT_ROOT = REPO / "ml/artifacts"
 CHUNK = 5_000
+# consecutive all-partition EOF bursts tolerated while still behind the high
+# watermark, at roughly one poll timeout each, before a batch read gives up
+EOF_PATIENCE = 30
 EPOCH_UTC = dt.datetime(1970, 1, 1, tzinfo=dt.UTC)
 
 # mart weather column <- ISD export column (silver names; unit conversion,
@@ -587,6 +590,7 @@ def run(follow: bool, group: str) -> None:
         consumer.assign([TopicPartition(IN_TOPIC, p, 0) for p in range(PARTITIONS)])
         assigned.update((IN_TOPIC, p) for p in range(PARTITIONS))
     at_eof: set[tuple[str, int]] = set()
+    eof_bursts = 0
     buffer: list[dict] = []
     uncommitted = 0
 
@@ -600,6 +604,25 @@ def run(follow: bool, group: str) -> None:
             consumer.commit(asynchronous=False)
             uncommitted = 0
 
+    def truly_at_end() -> tuple[bool, str]:
+        # EOF events alone are NOT trusted for batch completion: a fetch that
+        # loses its data mid-read (the retention purge this project hit, or a
+        # broker still settling) answers EOF on every partition, and a batch
+        # that trusts EOF reports a serene "scored 0". Completion also
+        # requires the consumed position to have reached the high watermark
+        # on every partition. An empty partition (low == high, nothing ever
+        # written or all of it gone) is complete by definition.
+        from streaming.admin import PARTITIONS
+
+        behind = []
+        for p in range(PARTITIONS):
+            tp = TopicPartition(IN_TOPIC, p)
+            lo, hi = consumer.get_watermark_offsets(tp, timeout=10)
+            pos = consumer.position([tp])[0].offset
+            if hi > lo and pos < hi:  # OFFSET_INVALID (-1001) counts as behind
+                behind.append(f"p{p} pos={pos} [{lo},{hi})")
+        return not behind, ", ".join(behind)
+
     try:
         while True:
             msg = consumer.poll(1.0)
@@ -611,8 +634,24 @@ def run(follow: bool, group: str) -> None:
                 if msg.error().code() == KafkaError._PARTITION_EOF:
                     at_eof.add((msg.topic(), msg.partition()))
                     if not follow and assigned and at_eof >= assigned:
-                        drain()
-                        break
+                        done, behind = truly_at_end()
+                        if done:
+                            drain()
+                            break
+                        # EOF everywhere while partitions are still behind:
+                        # keep polling, but bounded — a batch that can never
+                        # reach the watermark must fail loudly, not hang and
+                        # not report a short read as success
+                        eof_bursts += 1
+                        if eof_bursts > EOF_PATIENCE:
+                            raise SystemExit(
+                                f"consumer stalled: EOF on every partition but "
+                                f"still behind ({behind}). The usual cause is "
+                                f"broker-side segment deletion under the stream's "
+                                f"event-time timestamps; see the retention note in "
+                                f"docker-compose.yml."
+                            )
+                        at_eof.clear()
                     continue
                 raise SystemExit(f"consumer error: {msg.error()}")
             at_eof.discard((msg.topic(), msg.partition()))

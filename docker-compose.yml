@@ -24,6 +24,16 @@ services:
       # topics are created explicitly by streaming/admin.py with the partition
       # layout the tail-keying design needs; accidental topics hide bugs
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # RETENTION OFF, deliberately: replay events carry EVENT-TIME message
+      # timestamps (September 2024, by design — no wall clock in the stream),
+      # and the default 7-day time-based retention judges segments by exactly
+      # those timestamps, deleting the whole replay week at the first
+      # retention check (~5 minutes after broker start; log start advances to
+      # the high watermark and every fetch reads "offset out of range"). The
+      # dress rehearsal caught this as a consumer that scored 0 whenever the
+      # produce-to-consume gap outlasted the race. Topics are recreated per
+      # demo, so disk stays bounded at about one replay week.
+      KAFKA_LOG_RETENTION_HOURS: "-1"
       # base64url("flight-delay-682") — a fixed 22-char KRaft cluster id so
       # the metadata volume survives compose restarts deterministically
       CLUSTER_ID: ZmxpZ2h0LWRlbGF5LTY4Mg

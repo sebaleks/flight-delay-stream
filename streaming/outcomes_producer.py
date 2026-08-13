@@ -101,6 +101,12 @@ def run(seed: int, limit: int | None, speed: float) -> int:
     })
     ctx = SerializationContext(TOPIC, MessageField.VALUE)
     kctx = SerializationContext(TOPIC, MessageField.KEY)
+    delivery_errors: list[str] = []
+
+    def on_delivery(err, _msg) -> None:
+        # without a callback, failed deliveries vanish and "produced N" lies
+        if err is not None:
+            delivery_errors.append(str(err))
 
     produced, prev_ts = 0, None
     for row in out.iloc[:limit].itertuples(index=False) if limit else out.itertuples(index=False):
@@ -117,6 +123,7 @@ def run(seed: int, limit: int | None, speed: float) -> int:
                     value=serialize(event, ctx),
                     partition=partition_for(key),
                     timestamp=event["truth_ts_utc"],
+                    on_delivery=on_delivery,
                 )
                 break
             except BufferError:  # local queue full: drain, then retry
@@ -124,6 +131,9 @@ def run(seed: int, limit: int | None, speed: float) -> int:
         producer.poll(0)
         produced += 1
     producer.flush()
+    if delivery_errors:
+        raise SystemExit(f"delivery failed for {len(delivery_errors)} events: "
+                         f"{delivery_errors[:3]}")
     print(f"produced {produced} outcome events to {TOPIC} (seed {seed}, "
           f"speed {speed or 'max'})")
     return produced
