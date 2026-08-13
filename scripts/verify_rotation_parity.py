@@ -13,7 +13,8 @@ compares the emitted rotation features:
    batch twin).
 
 Prints link-class shares (class c split by trigger), a per-column mismatch
-table for both comparisons, and writes data/rotation_parity.json (committed; evaluation/ is git-ignored).
+table for both comparisons, and writes data/rotation_parity.json (a committed
+finding; evaluation/ is git-ignored runtime output).
 
     uv run --extra kafka --extra ml python scripts/verify_rotation_parity.py
 """
