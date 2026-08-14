@@ -9,7 +9,7 @@
 UV := uv run --extra kafka --extra ml --extra serve --extra ingestion
 TOPICS := flight.departures.v1 flight.outcomes.v1 flight.delay_risk.v1
 
-.PHONY: demo eval test up down reset ui dashboard
+.PHONY: demo eval test up down reset
 
 up:
 	docker compose up -d --wait
@@ -43,11 +43,6 @@ eval:
 # pass flags through, e.g. make ui ARGS="--origin ORD --min-risk 0.6"
 ui:
 	$(UV) python -m streaming.ui $(ARGS)
-
-# web dashboard over the risk topic + evaluation report at http://127.0.0.1:8600.
-# Falls back to the committed data/reference_output/ pair when the broker is down.
-dashboard:
-	$(UV) python -m streaming.dashboard $(ARGS)
 
 test:
 	$(UV) python -m pytest streaming/ -q
