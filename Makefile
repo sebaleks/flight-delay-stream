@@ -39,6 +39,11 @@ demo: reset
 eval:
 	$(UV) python -m streaming.evaluator
 
+# terminal consumer over the risk topic: per-flight risk + cascade exposure.
+# pass flags through, e.g. make ui ARGS="--origin ORD --min-risk 0.6"
+ui:
+	$(UV) python -m streaming.ui $(ARGS)
+
 test:
 	$(UV) python -m pytest streaming/ -q
 	$(UV) ruff check streaming/ scripts/

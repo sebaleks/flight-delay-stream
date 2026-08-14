@@ -21,6 +21,7 @@
     {"name": "weather_basis", "type": {"type": "enum", "name": "WeatherBasis", "symbols": ["observed", "taf_forecast", "null_path"]}, "knowable_at": "pre_departure_stream"},
     {"name": "taf_horizon_bin", "type": ["null", "string"], "default": null, "knowable_at": "pre_departure_stream", "doc": "0-3h / 3-12h / 12-30h when weather_basis = taf_forecast"},
     {"name": "pressure_late_arrivals", "type": ["null", "int"], "default": null, "knowable_at": "pre_departure_stream", "doc": "trailing-window count of late arrivals at origin before T; ops context, NOT an input to the frozen model"},
-    {"name": "pressure_cancellations", "type": ["null", "int"], "default": null, "knowable_at": "pre_departure_stream", "doc": "trailing-window cancellations at origin before T; ops context, NOT an input to the frozen model"}
+    {"name": "pressure_cancellations", "type": ["null", "int"], "default": null, "knowable_at": "pre_departure_stream", "doc": "trailing-window cancellations at origin before T; ops context, NOT an input to the frozen model"},
+    {"name": "turnaround_band", "type": ["null", "string"], "default": null, "knowable_at": "pre_departure_stream", "doc": "scheduled turnaround band before this leg, a value of constants.TURNAROUND_BANDS; null when the link is swap-shaped or the tail is unknown. String not enum: 35_60 and 60_120 are not legal Avro enum symbols. Consumed by streaming/ui.py to weight downstream cascade exposure"}
   ]
 }

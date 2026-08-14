@@ -130,7 +130,7 @@ Step 0 above, all in background. Step 1: `streaming/constants.py` plus unit test
 | Drift measurement | DONE 2026-08-11 (early; see the drift record above) | n/a |
 | Confluent Cloud screenshot | CLOSED by Seb 2026-08-11 | n/a; ledger row records it |
 | Tier 1 live mode | not scheduled | Cut unless everything is green by Day 2, 15:00 |
-| Streamlit tail UI | cut now | Terminal consumer output |
+| Streamlit tail UI | cut now, and the terminal consumer it was cut in favour of is BUILT (2026-08-13) | `streaming/ui.py`, `make ui` |
 
 ## Deletion-first audit (recommendations; executed so far: the docs_legacy migration, the rulebook promotion, and the reviewer-facing README/.env.example rewrites, all committed)
 
@@ -309,7 +309,7 @@ The proposal (`docs/PROPOSAL_DRAFT.md`) is submitted and frozen; it is never edi
 | Milestone 4: TAF skill-by-horizon study | DONE (Aidan's H5, verified 2026-08-13): 0-3h ΔPR-AUC 0.0430 exceeds the 0.010 trigger — representation mismatch, harmonize-first verdict, no retrain; `data/taf_study.json`. Structural finding: scoring at T with latest-issuance TAF selection leaves the 12-30h bin empty (n=1), so the long-horizon cost is unmeasurable in this design and would need earlier scoring lead times. Harmonize-first follow-up EXECUTED 2026-08-13 (`data/taf_harmonization.json`, MLflow-logged): with observed truth degraded to TAF's vocabulary, the representation share of the short-bin gap is 0.0382 of 0.0430 (89%) and the true forecast share is 0.0048, BELOW the 0.010 trigger; flight-rules category agreement between observed and TAF visibility is 97.7% over 144,877 pairs. Conclusion: harmonization closes the gap at the source; the harmonized-feature retrain is justified FUTURE work under the adoption rule; retraining on forecast inputs is not indicated | shipped, follow-up measured |
 | §6 fallback: "smoothed route/carrier historical rate with a `model_unavailable` flag" | NOT implemented. The consumer fails loudly when artifacts are absent (fetch instructions in the error) rather than silently degrading to a lookup score; the delay_risk contract has no `model_unavailable` field, so building the claimed fallback needs a BACKWARD-compatible schema addition plus its own calibration story. The honest speak-from line: we chose fail-loud over an unmarked quality cliff and the claimed fallback remains unbuilt | open, on record |
 | §5 milestone 5: instructor sign-off for cross-course reuse | not recorded anywhere in the repo; obtain and note it here | open, action Seb + Aidan |
-| §2: "README <= 10 steps" | 8 steps, rehearsed on a fresh clone | shipped |
+| §2: "README <= 10 steps" | 9 steps after `make ui` was added, rehearsed on a fresh clone | shipped |
 
 ## Final package checklist (audited 2026-08-13 against the 20-point rubric)
 

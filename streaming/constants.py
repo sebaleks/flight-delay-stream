@@ -123,6 +123,24 @@ ALERT_THRESHOLD = 0.5
 # event; never an input to the frozen model.
 PRESSURE_WINDOW_HOURS = 3
 
+# --- Cascade exposure -------------------------------------------------------
+
+# How exposed a downstream leg is to an inbound delay, by its own scheduled
+# turnaround band. A leg with under 35 minutes of turnaround has no slack to
+# absorb anything its inbound aircraft brings; one with over two hours absorbs
+# nearly all of it. Keyed to TURNAROUND_BANDS so the taxonomy stays single-
+# sourced. Used only by streaming/ui.py to rank cascade risk for a human; these
+# weights are a STATED JUDGMENT, not a measured quantity, and never reach the
+# frozen model. A swap-shaped leg has no knowable turnaround and is therefore
+# absent here: the UI counts those separately rather than imputing a weight.
+CASCADE_TIGHTNESS_WEIGHTS = {
+    "lt_35": 1.0,
+    "35_60": 0.6,
+    "60_120": 0.3,
+    "ge_120": 0.1,
+    "no_inbound": 0.0,
+}
+
 # --- Risk banding -----------------------------------------------------------
 
 # delay_risk.risk_band is the calibrated probability's decile bucket, rendered

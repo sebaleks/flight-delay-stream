@@ -496,7 +496,7 @@ class Scorer:
     def score_chunk(self, events: list[dict]) -> None:
         if not events:
             return
-        rows, weather_bases, bases = [], [], []
+        rows, weather_bases, bases, bands = [], [], [], []
         for ev in events:
             # exactly one observe() per event, in poll order — per-tail
             # ordering within a partition is what makes the state valid
@@ -505,11 +505,16 @@ class Scorer:
             rows.append(row)
             weather_bases.append(wb)
             bases.append(basis_for(rot.link_class, ev["is_warmup"]))
+            # already derived for the historical lookup; emitting it costs
+            # nothing and is what lets the UI weight downstream exposure
+            bands.append(rot.band_key)
         x = build_frame(rows, self.lookups, self.booster_names)
         # raw scores are recall-inflated; the Platt map is strictly monotonic,
         # so calibrated p is a frequency and ranking metrics are unchanged
         p_cal = self.calibrator.transform(self.clf.predict_proba(x)[:, 1])
-        for ev, wb, basis, p in zip(events, weather_bases, bases, p_cal, strict=True):
+        for ev, wb, basis, band, p in zip(
+            events, weather_bases, bases, bands, p_cal, strict=True
+        ):
             p = float(p)
             alert = p >= c.ALERT_THRESHOLD
             if alert:
@@ -534,6 +539,7 @@ class Scorer:
                 "taf_horizon_bin": None,
                 "pressure_late_arrivals": late,
                 "pressure_cancellations": canc,
+                "turnaround_band": band,
             }
             key = ev["tail_number"] or c.NULL_TAIL_SENTINEL_KEY
             self.producer.produce(

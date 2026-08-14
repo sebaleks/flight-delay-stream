@@ -9,7 +9,7 @@
 > MSDS 681 batch platform this project was built on, kept as reference.** Its
 > GCP setup instructions do not apply to reviewers.
 
-## Quickstart (the whole reviewer path, 8 steps)
+## Quickstart (the whole reviewer path, 9 steps)
 
 1. Prerequisites: Docker Desktop running, [uv](https://docs.astral.sh/uv/) installed, `git`.
 2. `git clone https://github.com/sebaleks/flight-delay-stream && cd flight-delay-stream`
@@ -17,8 +17,9 @@
 4. Model artifacts (the consumer scores with them): `bash scripts/fetch_artifacts.sh` downloads the frozen run into `ml/artifacts/` from the GitHub release (needs `gh` logged in; phase 1, ~290 MB, suffices).
 5. `make demo` — brings up Kafka + Schema Registry (KRaft, Confluent 8.3.1), registers the Avro contracts, replays the committed week (2024-09-02 to 2024-09-08 plus a warm-up day, 151,878 departures and 151,878 outcomes at event time), scores every departure through the consumer, then prints the outcome-join evaluation.
 6. Expected output: both producers report `produced 151878 events`; the consumer reports `scored 151878 events ... (alerts 7061 at p>=0.5)`; the evaluation prints the headline `precision 0.548908 recall 0.177616 (5950 alerts, 133627 scored)` above the nine join counters (warm-up day and cancellations excluded into their own counters, nothing silently dropped). Two runs produce byte-identical reports and alert files.
-7. `make test` — the streaming test suite (constants source-pinning, rotation, enrichment, leakage, pressure, evaluator; 52 tests) and lint.
-8. Cleanup: `make down` (equivalent to `docker compose down -v`).
+7. `make ui` — the terminal consumer over the risk topic: every scored departure ranked by probability, and a cascade view ranking which delays would propagate furthest through the aircraft's remaining legs that day. Filters pass through, e.g. `make ui ARGS="--origin ORD --min-risk 0.6"`, and `make ui ARGS="--follow"` tails the topic live.
+8. `make test` — the streaming test suite (constants source-pinning, rotation, enrichment, leakage, pressure, cascade, cascade, evaluator; 59 tests) and lint.
+9. Cleanup: `make down` (equivalent to `docker compose down -v`).
 
 Without running anything: [data/reference_output/](data/reference_output/) holds the committed alert artifact and evaluation report from this exact commit, with a README explaining the fields and the join counters. Because replay is deterministic, `diff`-ing your run against those files is a regression test. Data provenance, ownership, rights and access are in [docs/data_sources.md](docs/data_sources.md); who built what is in [docs/CONTRIBUTIONS.md](docs/CONTRIBUTIONS.md).
 

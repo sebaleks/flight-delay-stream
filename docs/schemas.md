@@ -96,12 +96,15 @@ One event per scored departure, defined at T = scheduled departure. `scored_at_t
     {"name": "weather_basis",        "type": {"type": "enum", "name": "WeatherBasis", "symbols": ["observed", "taf_forecast", "null_path"]}, "knowable_at": "pre_departure_stream"},
     {"name": "taf_horizon_bin",      "type": ["null", "string"], "default": null,                 "knowable_at": "pre_departure_stream", "doc": "0-3h / 3-12h / 12-30h when weather_basis = taf_forecast"},
     {"name": "pressure_late_arrivals",  "type": ["null", "int"], "default": null,                 "knowable_at": "pre_departure_stream", "doc": "trailing-window count of late arrivals at origin before T; ops context, see note"},
-    {"name": "pressure_cancellations",  "type": ["null", "int"], "default": null,                 "knowable_at": "pre_departure_stream", "doc": "trailing-window cancellations at origin before T; ops context, see note"}
+    {"name": "pressure_cancellations",  "type": ["null", "int"], "default": null,                 "knowable_at": "pre_departure_stream", "doc": "trailing-window cancellations at origin before T; ops context, see note"},
+    {"name": "turnaround_band",         "type": ["null", "string"], "default": null,              "knowable_at": "pre_departure_stream", "doc": "scheduled turnaround band before this leg; null when swap-shaped, see note"}
   ]
 }
 ```
 
 Note on the pressure fields: they are computed in-stream from events strictly before T (knowable at T, no tail linkage required) and carried as ops context beside the score. Implemented semantics (streaming/consumer.PressureIndex, window from `streaming/constants.PRESSURE_WINDOW_HOURS` = 3): late arrivals are outcomes with `arr_del15` true whose DEST is this origin; cancellations are cancelled outcomes whose ORIGIN is this origin; an outcome counts when its `truth_ts_utc` lies in `[T - window, T)` (left-inclusive, right-exclusive: truth at exactly T is simultaneous, not before). Cancellation truth time is the scheduled arrival, the outcomes producer's disclosed approximation. They are NOT inputs to the frozen 2024-06-30 model, whose 51-feature schema is hard-asserted before every prediction; they become model inputs only under a future retrain governed by the adoption rule (validation selects, test confirms once).
+
+Note on `turnaround_band`: the scheduled gap between the previous leg's scheduled arrival and this departure, bucketed by `streaming/constants.turnaround_band()` into a value of `TURNAROUND_BANDS`. The consumer already derives it for the historical-rate lookup, so emitting it adds no computation. It is null exactly when the rotation block is null: a swap-shaped linkage or an unknown tail, where no turnaround is knowable. It is a string rather than an Avro enum because `35_60` and `60_120` begin with digits and are not legal enum symbols. Its consumer is `streaming/ui.py`, which weights downstream cascade exposure by it; like the pressure fields it is ops context and not an input to the frozen model.
 
 ## 4. Alert artifact (`alerts.jsonl`; one JSON object per line)
 

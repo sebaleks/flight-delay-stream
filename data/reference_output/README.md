@@ -74,6 +74,24 @@ The palette is the deck's slate re-stepped to clear the chroma floor, paired
 with its signal orange, validated for colour-vision-deficiency separation
 (worst adjacent pair dE 19.6 protan) rather than chosen by eye.
 
+## Seeing it interactively
+
+`make ui` reads the same risk topic these files came from and prints two views:
+every scored departure ranked by probability, and a cascade ranking of which
+delays would propagate furthest through the aircraft's remaining legs that day.
+Filters pass through, for example:
+
+```bash
+make ui ARGS="--origin ORD --min-risk 0.6 --cascade-only"
+make ui ARGS="--tail N432SW"
+make ui ARGS="--follow"          # live tail as records arrive
+```
+
+The cascade ranking is computed over the full event set and only then filtered
+for display. Filtering first would splice itineraries that never happened: a
+departure from ORD would appear to be followed by the next ORD departure of the
+same aircraft, skipping the leg that actually flew it back.
+
 ## Reproducing
 
 ```bash
