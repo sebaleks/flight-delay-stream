@@ -46,6 +46,15 @@ Rendered from the two files above by `scripts/plot_evaluation.py`, which
 recomputes nothing: plotting a number the evaluator did not produce would put
 a second, unversioned source of truth in the report.
 
+`pipeline.png` is the one figure not rendered from the artifacts: it is a hand
+authored diagram, source at `scripts/pipeline_diagram.svg`, rasterized with
+`rsvg-convert -z 2`. It shows the append path rather than the topology, because
+the topology is already prose everywhere and the ordering is not: poll in tail
+order, score at T against the two state stores, produce the risk record, and
+only then commit the input offset. That last arrow is the whole claim. It is
+drawn dashed and in the signal colour because it is the difference between
+at-least-once and losing a score.
+
 `threshold_sweep.png` answers what moving the alert threshold costs and buys.
 Precision and recall across all 19 sweep points, the three sampled operating
 points labelled, and the base rate drawn as a reference, because 0.549

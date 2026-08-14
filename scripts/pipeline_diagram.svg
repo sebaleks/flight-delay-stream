@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 560" width="1060" height="560" role="img" aria-label="How a risk record gets appended: the consumer polls the departures topic in tail order, scores with rotation and pressure state, produces the risk record, and only then commits the input offset.">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1a2430"/>
+    </marker>
+    <marker id="ahc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a8461c"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1060" height="560" fill="#f7f5f0"/>
+
+  <text x="30" y="36" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="21" font-weight="bold" fill="#1a2430">How a risk record gets appended</text>
+  <text x="30" y="60" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" fill="#5c6875">The input offset advances only after the risk record is durable, so a crash can duplicate a score but never lose one</text>
+
+  <!-- departures topic -->
+  <rect x="44" y="150" width="170" height="104" rx="3" fill="#ffffff" stroke="#2b6ca3" stroke-width="2"/>
+  <text x="129" y="180" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="12.5" font-weight="bold" fill="#2b6ca3">flight.departures.v1</text>
+  <text x="129" y="202" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#5c6875">keyed by tail number</text>
+  <text x="129" y="220" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#5c6875">6 partitions</text>
+  <text x="129" y="238" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#5c6875">p0 = NOTAIL sentinel</text>
+
+  <!-- outcomes topic -->
+  <rect x="44" y="330" width="170" height="86" rx="3" fill="#ffffff" stroke="#2b6ca3" stroke-width="2"/>
+  <text x="129" y="360" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="12.5" font-weight="bold" fill="#2b6ca3">flight.outcomes.v1</text>
+  <text x="129" y="382" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#5c6875">late-arriving truth,</text>
+  <text x="129" y="400" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#5c6875">event time</text>
+
+  <!-- consumer -->
+  <rect x="312" y="96" width="366" height="356" rx="3" fill="#ffffff" stroke="#1a2430" stroke-width="2"/>
+  <text x="332" y="124" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#1a2430">Scoring consumer</text>
+
+  <rect x="332" y="140" width="326" height="74" rx="2" fill="#f2efe8" stroke="#ddd8ce" stroke-width="1"/>
+  <text x="346" y="162" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="bold" fill="#1a2430">Rotation state, per tail</text>
+  <text x="346" y="181" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#5c6875">duty window 0–840 min, position cap 6</text>
+  <text x="346" y="199" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#a8461c">swap-shaped link → 8 features NULL</text>
+
+  <rect x="332" y="226" width="326" height="56" rx="2" fill="#f2efe8" stroke="#ddd8ce" stroke-width="1"/>
+  <text x="346" y="248" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="bold" fill="#1a2430">Origin pressure window</text>
+  <text x="346" y="267" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#5c6875">trailing 3 h, strictly before T</text>
+
+  <rect x="332" y="294" width="326" height="56" rx="2" fill="#f2efe8" stroke="#ddd8ce" stroke-width="1"/>
+  <text x="346" y="316" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="bold" fill="#1a2430">Frozen model 20260730_145241</text>
+  <text x="346" y="335" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#5c6875">51 features, schema hard-asserted</text>
+
+  <text x="332" y="382" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="bold" fill="#1a2430">② score at scheduled gate time T</text>
+  <text x="332" y="401" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#5c6875">event time only, no wall clock</text>
+  <text x="332" y="428" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#5c6875">buffered in chunks of 5,000</text>
+
+  <!-- risk topic -->
+  <rect x="796" y="150" width="238" height="86" rx="3" fill="#ffffff" stroke="#2b6ca3" stroke-width="2"/>
+  <text x="915" y="180" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="12.5" font-weight="bold" fill="#2b6ca3">flight.delay_risk.v1</text>
+  <text x="915" y="202" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#5c6875">every departure scored,</text>
+  <text x="915" y="220" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#5c6875">also keyed by tail</text>
+
+  <!-- alerts -->
+  <rect x="796" y="300" width="238" height="76" rx="3" fill="#ffffff" stroke="#5c6875" stroke-width="1.5"/>
+  <text x="915" y="328" text-anchor="middle" font-family="SF Mono, Menlo, monospace" font-size="12.5" font-weight="bold" fill="#1a2430">alerts.jsonl</text>
+  <text x="915" y="350" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#5c6875">7,061 rows this week</text>
+  <text x="915" y="368" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#5c6875">in event-time order</text>
+
+  <!-- 1 poll -->
+  <line x1="214" y1="192" x2="306" y2="192" stroke="#1a2430" stroke-width="2" marker-end="url(#ah)"/>
+  <text x="260" y="182" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="bold" fill="#1a2430">① poll</text>
+  <text x="260" y="212" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#5c6875">in tail order</text>
+
+  <!-- outcomes feed -->
+  <line x1="214" y1="366" x2="306" y2="290" stroke="#1a2430" stroke-width="2" marker-end="url(#ah)"/>
+  <text x="238" y="318" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#5c6875">pressure counts</text>
+
+  <!-- 3 produce -->
+  <line x1="678" y1="192" x2="790" y2="192" stroke="#1a2430" stroke-width="2" marker-end="url(#ah)"/>
+  <text x="734" y="182" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="bold" fill="#1a2430">③ produce</text>
+  <text x="734" y="212" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#5c6875">then flush</text>
+
+  <!-- 3b append -->
+  <line x1="678" y1="334" x2="790" y2="334" stroke="#1a2430" stroke-width="2" marker-end="url(#ah)"/>
+  <text x="734" y="324" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="bold" fill="#1a2430">③ append</text>
+  <text x="734" y="354" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#5c6875">if p ≥ 0.5</text>
+
+  <!-- 4 commit, the barrier -->
+  <path d="M 495 452 L 495 528 L 20 528 L 20 202 L 36 202" fill="none" stroke="#a8461c" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#ahc)"/>
+  <text x="516" y="514" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#a8461c">④ commit offsets — only after ③ is durable</text>
+  <text x="516" y="533" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#a8461c">at-least-once: a replay duplicates a score, never drops one</text>
+</svg>
