@@ -23,6 +23,24 @@
 
 Without running anything: [data/reference_output/](data/reference_output/) holds the committed alert artifact and evaluation report from this exact commit, with a README explaining the fields and the join counters. Because replay is deterministic, `diff`-ing your run against those files is a regression test. Data provenance, ownership, rights and access are in [docs/data_sources.md](docs/data_sources.md); who built what is in [docs/CONTRIBUTIONS.md](docs/CONTRIBUTIONS.md).
 
+## Submission mapping
+
+This repository is the final package ("equivalent organization"). Required items map as follows:
+
+| Required item | Location here |
+|---|---|
+| README.md | this file (the block above and the quickstart) |
+| DATA_SOURCE.md | [docs/data_sources.md](docs/data_sources.md) |
+| AI_USAGE.md | [AI_USAGE.md](AI_USAGE.md) |
+| requirements.txt | [pyproject.toml](pyproject.toml) + [uv.lock](uv.lock) (pinned via uv) |
+| .env.example | [.env.example](.env.example) |
+| src/ | [streaming/](streaming/), [ml/](ml/), [scripts/](scripts/) |
+| data/sample_or_replay_data | [data/](data/) (the committed replay week and lookups) |
+| outputs/representative_result | [data/reference_output/alerts.jsonl](data/reference_output/alerts.jsonl) |
+| evaluation/validation_or_eval_artifact | [data/reference_output/streaming_eval.json](data/reference_output/streaming_eval.json), plus [data/](data/) study reports |
+| report.pdf | [report.pdf](report.pdf) (source: [docs/report.md](docs/report.md)) |
+| individual contributions | [docs/CONTRIBUTIONS.md](docs/CONTRIBUTIONS.md) |
+
 ---
 
 # Flight-Delay Lakehouse
